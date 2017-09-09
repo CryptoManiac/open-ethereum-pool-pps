@@ -57,6 +57,21 @@ func FormatRatReward(reward *big.Rat) string {
 	return reward.FloatString(8)
 }
 
+func GetShareReward(shareDiff, netDiff int64) int64 {
+	wei := new(big.Rat).SetInt(Ether)
+
+	wei.Mul(wei, new(big.Rat).SetInt64(5))
+	wei.Mul(wei, new(big.Rat).SetInt64(shareDiff))
+	wei.Quo(wei, new(big.Rat).SetInt64(netDiff))
+
+	shannon := new(big.Rat).SetInt(Shannon)
+	inShannon := new(big.Rat).Quo(wei, shannon)
+	value, _ := strconv.ParseInt(inShannon.FloatString(0), 10, 64)
+
+	return value
+}
+
+
 func StringInSlice(a string, list []string) bool {
 	for _, b := range list {
 		if b == a {

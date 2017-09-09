@@ -166,7 +166,7 @@ func (r *RedisClient) checkPoWExist(height uint64, params []string) (bool, error
 	return val == 0, err
 }
 
-func (r *RedisClient) WriteShare(login, id string, params []string, diff int64, height uint64, window time.Duration) (bool, error) {
+func (r *RedisClient) WriteShare(login, id string, params []string, diff int64, netDiff int64, height uint64, window time.Duration) (bool, error) {
 	exist, err := r.checkPoWExist(height, params)
 	if err != nil {
 		return false, err
@@ -182,7 +182,7 @@ func (r *RedisClient) WriteShare(login, id string, params []string, diff int64, 
 	ts := ms / 1000
 
 	_, err = tx.Exec(func() error {
-		r.writeShare(tx, ms, ts, login, id, diff, window)
+		r.writeShare(tx, ms, ts, login, id, diff, netDiff, window)
 		tx.HIncrBy(r.formatKey("stats"), "roundShares", diff)
 		return nil
 	})
@@ -205,7 +205,7 @@ func (r *RedisClient) WriteBlock(login, id string, params []string, diff, roundD
 	ts := ms / 1000
 
 	cmds, err := tx.Exec(func() error {
-		r.writeShare(tx, ms, ts, login, id, diff, window)
+		r.writeShare(tx, ms, ts, login, id, diff, roundDiff, window)
 		tx.HSet(r.formatKey("stats"), "lastBlockFound", strconv.FormatInt(ts, 10))
 		tx.HDel(r.formatKey("stats"), "roundShares")
 		tx.ZIncrBy(r.formatKey("finders"), 1, login)
@@ -230,7 +230,9 @@ func (r *RedisClient) WriteBlock(login, id string, params []string, diff, roundD
 	}
 }
 
-func (r *RedisClient) writeShare(tx *redis.Multi, ms, ts int64, login, id string, diff int64, expire time.Duration) {
+func (r *RedisClient) writeShare(tx *redis.Multi, ms, ts int64, login, id string, diff, netDiff int64, expire time.Duration) {
+	tx.HIncrBy(r.formatKey("miners", login), "balance", util.GetShareReward(diff, netDiff))
+
 	tx.HIncrBy(r.formatKey("shares", "roundCurrent"), login, diff)
 	tx.ZAdd(r.formatKey("hashrate"), redis.Z{Score: float64(ts), Member: join(diff, login, id, ms)})
 	tx.ZAdd(r.formatKey("hashrate", login), redis.Z{Score: float64(ts), Member: join(diff, id, ms)})
@@ -446,90 +448,34 @@ func (r *RedisClient) WritePayment(login, txHash string, amount int64) error {
 	return err
 }
 
-func (r *RedisClient) WriteImmatureBlock(block *BlockData, roundRewards map[string]int64) error {
+func (r *RedisClient) WriteImmatureBlock(block *BlockData) error {
 	tx := r.client.Multi()
 	defer tx.Close()
 
 	_, err := tx.Exec(func() error {
 		r.writeImmatureBlock(tx, block)
-		total := int64(0)
-		for login, amount := range roundRewards {
-			total += amount
-			tx.HIncrBy(r.formatKey("miners", login), "immature", amount)
-			tx.HSetNX(r.formatKey("credits", "immature", block.Height, block.Hash), login, strconv.FormatInt(amount, 10))
-		}
-		tx.HIncrBy(r.formatKey("finances"), "immature", total)
 		return nil
 	})
 	return err
 }
 
-func (r *RedisClient) WriteMaturedBlock(block *BlockData, roundRewards map[string]int64) error {
-	creditKey := r.formatKey("credits", "immature", block.RoundHeight, block.Hash)
-	tx, err := r.client.Watch(creditKey)
-	// Must decrement immatures using existing log entry
-	immatureCredits := tx.HGetAllMap(creditKey)
-	if err != nil {
-		return err
-	}
+func (r *RedisClient) WriteMaturedBlock(block *BlockData) error {
+	tx := r.client.Multi()
 	defer tx.Close()
 
-	ts := util.MakeTimestamp() / 1000
-	value := join(block.Hash, ts, block.Reward)
-
-	_, err = tx.Exec(func() error {
+	_, err := tx.Exec(func() error {
 		r.writeMaturedBlock(tx, block)
-		tx.ZAdd(r.formatKey("credits", "all"), redis.Z{Score: float64(block.Height), Member: value})
-
-		// Decrement immature balances
-		totalImmature := int64(0)
-		for login, amountString := range immatureCredits.Val() {
-			amount, _ := strconv.ParseInt(amountString, 10, 64)
-			totalImmature += amount
-			tx.HIncrBy(r.formatKey("miners", login), "immature", (amount * -1))
-		}
-
-		// Increment balances
-		total := int64(0)
-		for login, amount := range roundRewards {
-			total += amount
-			// NOTICE: Maybe expire round reward entry in 604800 (a week)?
-			tx.HIncrBy(r.formatKey("miners", login), "balance", amount)
-			tx.HSetNX(r.formatKey("credits", block.Height, block.Hash), login, strconv.FormatInt(amount, 10))
-		}
-		tx.Del(creditKey)
-		tx.HIncrBy(r.formatKey("finances"), "balance", total)
-		tx.HIncrBy(r.formatKey("finances"), "immature", (totalImmature * -1))
-		tx.HSet(r.formatKey("finances"), "lastCreditHeight", strconv.FormatInt(block.Height, 10))
-		tx.HSet(r.formatKey("finances"), "lastCreditHash", block.Hash)
-		tx.HIncrBy(r.formatKey("finances"), "totalMined", block.RewardInShannon())
 		return nil
 	})
 	return err
 }
 
 func (r *RedisClient) WriteOrphan(block *BlockData) error {
-	creditKey := r.formatKey("credits", "immature", block.RoundHeight, block.Hash)
-	tx, err := r.client.Watch(creditKey)
-	// Must decrement immatures using existing log entry
-	immatureCredits := tx.HGetAllMap(creditKey)
-	if err != nil {
-		return err
-	}
+	tx := r.client.Multi()
 	defer tx.Close()
 
-	_, err = tx.Exec(func() error {
+	_, err := tx.Exec(func() error {
 		r.writeMaturedBlock(tx, block)
-
-		// Decrement immature balances
-		totalImmature := int64(0)
-		for login, amountString := range immatureCredits.Val() {
-			amount, _ := strconv.ParseInt(amountString, 10, 64)
-			totalImmature += amount
-			tx.HIncrBy(r.formatKey("miners", login), "immature", (amount * -1))
-		}
-		tx.Del(creditKey)
-		tx.HIncrBy(r.formatKey("finances"), "immature", (totalImmature * -1))
 		return nil
 	})
 	return err

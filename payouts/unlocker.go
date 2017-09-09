@@ -296,18 +296,16 @@ func (u *BlockUnlocker) unlockPendingBlocks() {
 	}
 
 	totalRevenue := new(big.Rat)
-	totalMinersProfit := new(big.Rat)
-	totalPoolProfit := new(big.Rat)
 
 	for _, block := range result.maturedBlocks {
-		revenue, minersProfit, poolProfit, roundRewards, err := u.calculateRewards(block)
+		revenue, err := u.calculateRevenue(block)
 		if err != nil {
 			u.halt = true
 			u.lastFail = err
 			log.Printf("Failed to calculate rewards for round %v: %v", block.RoundKey(), err)
 			return
 		}
-		err = u.backend.WriteImmatureBlock(block, roundRewards)
+		err = u.backend.WriteImmatureBlock(block)
 		if err != nil {
 			u.halt = true
 			u.lastFail = err
@@ -315,28 +313,18 @@ func (u *BlockUnlocker) unlockPendingBlocks() {
 			return
 		}
 		totalRevenue.Add(totalRevenue, revenue)
-		totalMinersProfit.Add(totalMinersProfit, minersProfit)
-		totalPoolProfit.Add(totalPoolProfit, poolProfit)
 
 		logEntry := fmt.Sprintf(
-			"IMMATURE %v: revenue %v, miners profit %v, pool profit: %v",
+			"IMMATURE %v: revenue %v\n",
 			block.RoundKey(),
 			util.FormatRatReward(revenue),
-			util.FormatRatReward(minersProfit),
-			util.FormatRatReward(poolProfit),
 		)
-		entries := []string{logEntry}
-		for login, reward := range roundRewards {
-			entries = append(entries, fmt.Sprintf("\tREWARD %v: %v: %v Shannon", block.RoundKey(), login, reward))
-		}
-		log.Println(strings.Join(entries, "\n"))
+		log.Println(logEntry)
 	}
 
 	log.Printf(
-		"IMMATURE SESSION: revenue %v, miners profit %v, pool profit: %v",
+		"IMMATURE SESSION: revenue %v",
 		util.FormatRatReward(totalRevenue),
-		util.FormatRatReward(totalMinersProfit),
-		util.FormatRatReward(totalPoolProfit),
 	)
 }
 
@@ -395,18 +383,16 @@ func (u *BlockUnlocker) unlockAndCreditMiners() {
 	log.Printf("Inserted %v orphaned blocks to backend", result.orphans)
 
 	totalRevenue := new(big.Rat)
-	totalMinersProfit := new(big.Rat)
-	totalPoolProfit := new(big.Rat)
 
 	for _, block := range result.maturedBlocks {
-		revenue, minersProfit, poolProfit, roundRewards, err := u.calculateRewards(block)
+		revenue, err := u.calculateRevenue(block)
 		if err != nil {
 			u.halt = true
 			u.lastFail = err
 			log.Printf("Failed to calculate rewards for round %v: %v", block.RoundKey(), err)
 			return
 		}
-		err = u.backend.WriteMaturedBlock(block, roundRewards)
+		err = u.backend.WriteMaturedBlock(block)
 		if err != nil {
 			u.halt = true
 			u.lastFail = err
@@ -414,79 +400,30 @@ func (u *BlockUnlocker) unlockAndCreditMiners() {
 			return
 		}
 		totalRevenue.Add(totalRevenue, revenue)
-		totalMinersProfit.Add(totalMinersProfit, minersProfit)
-		totalPoolProfit.Add(totalPoolProfit, poolProfit)
 
 		logEntry := fmt.Sprintf(
-			"MATURED %v: revenue %v, miners profit %v, pool profit: %v",
+			"MATURED %v: revenue %v\n",
 			block.RoundKey(),
 			util.FormatRatReward(revenue),
-			util.FormatRatReward(minersProfit),
-			util.FormatRatReward(poolProfit),
 		)
-		entries := []string{logEntry}
-		for login, reward := range roundRewards {
-			entries = append(entries, fmt.Sprintf("\tREWARD %v: %v: %v Shannon", block.RoundKey(), login, reward))
-		}
-		log.Println(strings.Join(entries, "\n"))
+		log.Println(logEntry)
 	}
 
 	log.Printf(
-		"MATURE SESSION: revenue %v, miners profit %v, pool profit: %v",
+		"MATURE SESSION: revenue %v",
 		util.FormatRatReward(totalRevenue),
-		util.FormatRatReward(totalMinersProfit),
-		util.FormatRatReward(totalPoolProfit),
 	)
 }
 
-func (u *BlockUnlocker) calculateRewards(block *storage.BlockData) (*big.Rat, *big.Rat, *big.Rat, map[string]int64, error) {
+func (u *BlockUnlocker) calculateRevenue(block *storage.BlockData) (*big.Rat, error) {
 	revenue := new(big.Rat).SetInt(block.Reward)
-	minersProfit, poolProfit := chargeFee(revenue, u.config.PoolFee)
-
-	shares, err := u.backend.GetRoundShares(block.RoundHeight, block.Nonce)
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
-
-	rewards := calculateRewardsForShares(shares, block.TotalShares, minersProfit)
 
 	if block.ExtraReward != nil {
 		extraReward := new(big.Rat).SetInt(block.ExtraReward)
-		poolProfit.Add(poolProfit, extraReward)
 		revenue.Add(revenue, extraReward)
 	}
 
-	if u.config.Donate {
-		var donation = new(big.Rat)
-		poolProfit, donation = chargeFee(poolProfit, donationFee)
-		login := strings.ToLower(donationAccount)
-		rewards[login] += weiToShannonInt64(donation)
-	}
-
-	if len(u.config.PoolFeeAddress) != 0 {
-		address := strings.ToLower(u.config.PoolFeeAddress)
-		rewards[address] += weiToShannonInt64(poolProfit)
-	}
-
-	return revenue, minersProfit, poolProfit, rewards, nil
-}
-
-func calculateRewardsForShares(shares map[string]int64, total int64, reward *big.Rat) map[string]int64 {
-	rewards := make(map[string]int64)
-
-	for login, n := range shares {
-		percent := big.NewRat(n, total)
-		workerReward := new(big.Rat).Mul(reward, percent)
-		rewards[login] += weiToShannonInt64(workerReward)
-	}
-	return rewards
-}
-
-// Returns new value after fee deduction and fee value.
-func chargeFee(value *big.Rat, fee float64) (*big.Rat, *big.Rat) {
-	feePercent := new(big.Rat).SetFloat64(fee / 100)
-	feeValue := new(big.Rat).Mul(value, feePercent)
-	return new(big.Rat).Sub(value, feeValue), feeValue
+	return revenue, nil
 }
 
 func weiToShannonInt64(wei *big.Rat) int64 {
