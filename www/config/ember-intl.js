@@ -15,7 +15,7 @@ module.exports = function(environment) {
     * @type {Array?}
     * @default "null"
     */
-    locales: null,
+    locales: ['ru-ru'],
 
     /**
     * baseLocale is used to determine if translation keys are missing from other locales.

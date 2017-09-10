@@ -1,43 +1,36 @@
-<div class="container">
+﻿<div class="container">
   <div class="page-header">
-    <h1>How To Mine</h1>
+    <h2>Как присоединиться к нам</h2>
   </div>
-  <p class="lead">In order to mine on this pool you need to have an
-    <a href="https://github.com/ethereum/webthree-umbrella/releases" rel="nofollow" target="_blank">ethminer</a> installation
-    pointed to<br/><code>{{config.HttpHost}}:{{config.HttpPort}}/YOUR_ETH_ADDRESS/RIG_ID</code>
+  <p>Чтобы присоединиться к генерации Ethereum в нашем пуле, вам нужно подключить свой майнер к Stratum интерфейсу, который доступен по адресу <code>{{config.StratumHost}}:{{config.StratumPort}}</code></p>
+  <p>
+    <strong>Пример подключения:</strong>
+    <code>EthDcrMiner64.exe -epool stratum+tcp://{{config.StratumHost}}:{{config.StratumPort}} -ewal YOUR_ETH_ADDRESS -epsw x -eworker RIG_ID</code>.<br/>
   </p>
   <dl class="dl-horizontal">
     <dt>YOUR_ETH_ADDRESS</dt>
-    <dd>This is your address for payouts, generate one with geth, or mine directly to exchange like
-      <a href="http://poloniex.com" rel="nofollow" target="_blank">Poloniex</a>
-      or <a href="http://bittrex.com" rel="nofollow" target="_blank">Bittrex</a>.<br/>
-      <strong>Example:</strong> <code>0xb85150eb365e7df0941f0cf08235f987ba91506a</code>.
+    <dd>Ваш адрес для выплат. <b>Не используйте</b> адреса биржевых аккаунтов, поскольку они вам не принадлежат.<br/>Создайте новый адрес с помощью geth, parity, или же используйте client-side кошелек (например <a href="https://www.myetherwallet.com/" rel="nofollow" target="_blank">MyEtherWallet</a>).<br/>
+      <strong>Пример:</strong> <code>0x5b475febb3018f41d0ac3c2f1a864bd102ab5a2e</code>.
     </dd>
     <dt>RIG_ID</dt>
     <dd>
-      ID of your farm to distinguish it from your other rig. If you have just one rig, feel free to omit this param.
-      This param must be short alphanumeric string with optional dashes and underscores.<br/>
-      <strong>Example:</strong> <code>rig-1</code>
+      Идентификатор машины, полезен если необходимо отличать машины друг от друга. Если вам этого не требуется, то параметр может быть опущен.
+      Этот параметр может содержать только символы из следующего набора: буквы латинского алфавита, цифры от 0-9, а также символы "_" и "-".<br/>
+      <strong>Пример:</strong> <code>rig-1</code>
     </dd>
   </dl>
-  <p>
-    <strong>Full example:</strong>
-    <code>ethminer -F {{config.HttpHost}}:{{config.HttpPort}}/0xb85150eb365e7df0941f0cf08235f987ba91506a/myfarm -G --farm-recheck 200</code>.<br/>
-    <span class="label label-info">Hint:</span> If you are compiling ethminer from latest source, please also use
-      extra <code>--disable-submit-hashrate</code> option.
-  </p>
+  <div class="page-header">
+    <h2>Часто задаваемые вопросы</h2>
+  </div>
+  <dl class="dl-horizontal">
+    <dt>Вопрос:</dt>
+    <dd>Как происходят начисления?</dd>
+    <dt>Ответ:</dt>
+    <dd>Используется метод оплаты за шару (PPS).</dd>
 
-  <h4>Stratum Mining with Stratum Proxy for Ethereum</h4>
-  <p class="lead">Grab proxy from <a href="https://github.com/Atrides/eth-proxy" re="nofollow" target="_blank">eth-proxy GitHub repo</a>.</p>
-  <p class="lead">Edit <code>eth-proxy.conf</code> and specify our pool's <code>HOST: {{config.StratumHost}}</code>, <code>PORT: {{config.StratumPort}}</code> and your <code>WALLET</code>.</p>
-
-  <h4>Mining with Ether-Proxy</h4>
-  <p class="lead">Use stable release of <a href="https://github.com/sammy007/ether-proxy/releases" target="_blank">Ethereum Solo/Pool Mining Proxy</a>.</p>
-
-  <h4>Advice</h4>
-  <p>CPU mining is not recommended.</p>
-  <h4>Terms of Service</h4>
-  <p>By using the pool you accept all possible risks related to experimental software usage.<br/>
-     Pool owner can't compensate any irreversible losses, but will do his best to prevent worst case.
-  </p>
+    <dt>Вопрос:</dt>
+    <dd>Я запустил майнер, он работает уже некоторое время, но я не вижу выплат. Это нормально? Если да, то почему?</dd>
+    <dt>Ответ:</dt>
+    <dd>Это нормально и означает, что Ваш баланс еще не достиг порогового значения.</dd>
+  </dl>
 </div>
