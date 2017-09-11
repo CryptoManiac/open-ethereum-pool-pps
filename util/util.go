@@ -57,7 +57,7 @@ func FormatRatReward(reward *big.Rat) string {
 	return reward.FloatString(8)
 }
 
-func GetShareReward(shareDiff, netDiff int64, fee float64) int64 {
+func GetShareReward(shareDiff, netDiff int64, fee float64) float64 {
 	wei := new(big.Rat).SetInt(Ether)
 	wei.Mul(wei, new(big.Rat).SetInt64(5))
 
@@ -70,7 +70,7 @@ func GetShareReward(shareDiff, netDiff int64, fee float64) int64 {
 
 	shannon := new(big.Rat).SetInt(Shannon)
 	inShannon := new(big.Rat).Quo(wei, shannon)
-	value, _ := strconv.ParseInt(inShannon.FloatString(0), 10, 64)
+	value, _ := inShannon.Float64()
 
 	return value
 }
