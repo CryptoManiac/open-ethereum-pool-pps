@@ -5,7 +5,7 @@ export default Ember.Route.extend({
   intl: Ember.inject.service(),
 
   beforeModel() {
-    this.get('intl').setLocale('en-us');
+    this.get('intl').setLocale('ru-ru');
   },
 
 	model: function() {

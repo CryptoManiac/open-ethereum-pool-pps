@@ -15,19 +15,19 @@ module.exports = function(environment) {
 
     APP: {
       // API host and port
-      ApiUrl: '//example.net/',
+      ApiUrl: '//pps-main.ethermine.ru/',
 
       // HTTP mining endpoint
-      HttpHost: 'http://example.net',
+      HttpHost: 'http://pps-main.ethermine.ru',
       HttpPort: 8888,
 
       // Stratum mining endpoint
-      StratumHost: 'example.net',
+      StratumHost: 'pps-main.ethermine.ru',
       StratumPort: 8008,
 
       // Fee and payout details
-      PoolFee: '1%',
-      PayoutThreshold: '0.5 Ether',
+      PoolFee: '1.5%',
+      PayoutThreshold: '0.25 ETH',
 
       // For network hashrate (change for your favourite fork)
       BlockTime: 14.4
