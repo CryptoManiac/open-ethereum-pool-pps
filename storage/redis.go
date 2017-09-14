@@ -231,8 +231,7 @@ func (r *RedisClient) WriteBlock(login, id string, params []string, diff, roundD
 }
 
 func (r *RedisClient) writeShare(tx *redis.Multi, ms, ts int64, login, id string, diff, netDiff int64, expire time.Duration) {
-	tx.HIncrBy(r.formatKey("miners", login), "balance", util.GetShareReward(diff, netDiff, 1.5))
-
+	tx.HIncrByFloat(r.formatKey("miners", login), "balance", util.GetShareReward(diff, netDiff, 1.5))
 	tx.HIncrBy(r.formatKey("shares", "roundCurrent"), login, diff)
 	tx.ZAdd(r.formatKey("hashrate"), redis.Z{Score: float64(ts), Member: join(diff, login, id, ms)})
 	tx.ZAdd(r.formatKey("hashrate", login), redis.Z{Score: float64(ts), Member: join(diff, id, ms)})
@@ -345,7 +344,9 @@ func (r *RedisClient) GetBalance(login string) (int64, error) {
 	} else if cmd.Err() != nil {
 		return 0, cmd.Err()
 	}
-	return cmd.Int64()
+	value, err := cmd.Float64()
+	
+	return int64(value), err // Truncate to GWei
 }
 
 func (r *RedisClient) LockPayouts(login string, amount int64) error {
@@ -403,7 +404,7 @@ func (r *RedisClient) UpdateBalance(login string, amount int64) error {
 	ts := util.MakeTimestamp() / 1000
 
 	_, err := tx.Exec(func() error {
-		tx.HIncrBy(r.formatKey("miners", login), "balance", (amount * -1))
+		tx.HIncrByFloat(r.formatKey("miners", login), "balance", float64(amount * -1))
 		tx.HIncrBy(r.formatKey("miners", login), "pending", amount)
 		tx.HIncrBy(r.formatKey("finances"), "balance", (amount * -1))
 		tx.HIncrBy(r.formatKey("finances"), "pending", amount)
@@ -418,7 +419,7 @@ func (r *RedisClient) RollbackBalance(login string, amount int64) error {
 	defer tx.Close()
 
 	_, err := tx.Exec(func() error {
-		tx.HIncrBy(r.formatKey("miners", login), "balance", amount)
+		tx.HIncrByFloat(r.formatKey("miners", login), "balance", float64(amount))
 		tx.HIncrBy(r.formatKey("miners", login), "pending", (amount * -1))
 		tx.HIncrBy(r.formatKey("finances"), "balance", amount)
 		tx.HIncrBy(r.formatKey("finances"), "pending", (amount * -1))
