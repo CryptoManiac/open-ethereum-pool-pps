@@ -345,7 +345,9 @@ func (r *RedisClient) GetBalance(login string) (int64, error) {
 	} else if cmd.Err() != nil {
 		return 0, cmd.Err()
 	}
-	return cmd.Int64()
+        res, err := cmd.Float64()
+
+	return int64(res), err // Truncate to GWei
 }
 
 func (r *RedisClient) LockPayouts(login string, amount int64) error {
@@ -403,7 +405,7 @@ func (r *RedisClient) UpdateBalance(login string, amount int64) error {
 	ts := util.MakeTimestamp() / 1000
 
 	_, err := tx.Exec(func() error {
-		tx.HIncrBy(r.formatKey("miners", login), "balance", (amount * -1))
+		tx.HIncrByFloat(r.formatKey("miners", login), "balance", float64(amount * -1))
 		tx.HIncrBy(r.formatKey("miners", login), "pending", amount)
 		tx.HIncrBy(r.formatKey("finances"), "balance", (amount * -1))
 		tx.HIncrBy(r.formatKey("finances"), "pending", amount)
@@ -418,7 +420,7 @@ func (r *RedisClient) RollbackBalance(login string, amount int64) error {
 	defer tx.Close()
 
 	_, err := tx.Exec(func() error {
-		tx.HIncrBy(r.formatKey("miners", login), "balance", amount)
+		tx.HIncrByFloat(r.formatKey("miners", login), "balance", float64(amount))
 		tx.HIncrBy(r.formatKey("miners", login), "pending", (amount * -1))
 		tx.HIncrBy(r.formatKey("finances"), "balance", amount)
 		tx.HIncrBy(r.formatKey("finances"), "pending", (amount * -1))
@@ -435,7 +437,7 @@ func (r *RedisClient) WritePayment(login, txHash string, amount int64) error {
 	ts := util.MakeTimestamp() / 1000
 
 	_, err := tx.Exec(func() error {
-		tx.HIncrBy(r.formatKey("miners", login), "pending", (amount * -1))
+		tx.HIncrByFloat(r.formatKey("miners", login), "pending", float64(amount * -1))
 		tx.HIncrBy(r.formatKey("miners", login), "paid", amount)
 		tx.HIncrBy(r.formatKey("finances"), "pending", (amount * -1))
 		tx.HIncrBy(r.formatKey("finances"), "paid", amount)
