@@ -217,7 +217,7 @@ func (r *RedisClient) WriteBlock(login, id string, params []string, diff, roundD
 	if err != nil {
 		return false, err
 	} else {
-		sharesMap, _ := cmds[10].(*redis.StringStringMapCmd).Result()
+		sharesMap, _ := cmds[len(cmds) - 1].(*redis.StringStringMapCmd).Result()
 		totalShares := int64(0)
 		for _, v := range sharesMap {
 			n, _ := strconv.ParseInt(v, 10, 64)
@@ -232,7 +232,6 @@ func (r *RedisClient) WriteBlock(login, id string, params []string, diff, roundD
 
 func (r *RedisClient) writeShare(tx *redis.Multi, ms, ts int64, login, id string, diff, netDiff int64, expire time.Duration) {
 	tx.HIncrByFloat(r.formatKey("miners", login), "balance", util.GetShareReward(diff, netDiff, 1.5))
-
 	tx.HIncrBy(r.formatKey("shares", "roundCurrent"), login, diff)
 	tx.ZAdd(r.formatKey("hashrate"), redis.Z{Score: float64(ts), Member: join(diff, login, id, ms)})
 	tx.ZAdd(r.formatKey("hashrate", login), redis.Z{Score: float64(ts), Member: join(diff, id, ms)})
@@ -345,9 +344,9 @@ func (r *RedisClient) GetBalance(login string) (int64, error) {
 	} else if cmd.Err() != nil {
 		return 0, cmd.Err()
 	}
-        res, err := cmd.Float64()
-
-	return int64(res), err // Truncate to GWei
+	value, err := cmd.Float64()
+	
+	return int64(value), err // Truncate to GWei
 }
 
 func (r *RedisClient) LockPayouts(login string, amount int64) error {
