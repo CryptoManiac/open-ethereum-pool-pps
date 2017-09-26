@@ -1,6 +1,6 @@
-﻿<div class="jumbotron">
+<div class="jumbotron">
   <div class="container">
-    Всего проведено <span class="label label-info">{{model.paymentsTotal}}</span> выплат на сумму <span class="label label-info">{{format-balance model.paidTotal}}</span> ETH
+    Всего проведено <span class="label label-info">{{model.paymentsTotal}}</span> выплат
   </div>
 </div>
 <div class="container">
@@ -19,7 +19,7 @@
       {{#each model.payments as |tx|}}
         <tr>
           <td>{{format-date-locale tx.timestamp}}</td>
-          <td>{{format-balance tx.formatAmount}}</td>
+          <td>{{format-balance tx.amount}}</td>
           <td>
             <a href="https://etherscan.io/address/{{tx.address}}" class="hash" rel="nofollow" target="_blank">{{tx.address}}</a>
           </td>
