@@ -22,7 +22,7 @@ Examine the market in order to discover acceptable fee ratio. FOr example, if th
 
 ## Estimate amount of reserves
 
-Amount of required reserves are directly dependent on the block reward (D), mining fee (F) and risk of bankruptcy (P) and may be calculated using the following equation:
+Amount of required reserves are directly dependent on the block reward (B), mining fee (F) and risk of bankruptcy (P) and may be calculated using the following equation:
 
 ```R = B * ln(1/P) / (2 * F)```
 
