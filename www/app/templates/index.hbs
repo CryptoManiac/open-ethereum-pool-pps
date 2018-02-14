@@ -1,4 +1,4 @@
-﻿<div class="jumbotron">
+<div class="jumbotron">
   <div class="container">
     <div class="row">
       <div class="col-md-5">
@@ -25,6 +25,7 @@
   </div>
 </div>
 
+<!--
 <div class="container">
   <div class="stats">
     <h4>Ваша статистика &amp; История выплат</h4>
@@ -45,4 +46,40 @@
         <p>EthDcrMiner64.exe -epool stratum+tcp://{{config.StratumHost}}:{{config.StratumPort}} -ewal &lt;address&gt; -epsw x -eworker &lt;worker&gt;</p>
     </span>
   </div>
+</div>
+-->
+
+<div class="container">
+  <div class="note note-info">
+    <span>
+        <p>Stratum интерфейс доступен по адресу <span class="label label-success">{{config.StratumHost}}:{{config.StratumPort}}</span>.</p>
+        <br/>
+        <p>EthDcrMiner64.exe -epool stratum+tcp://{{config.StratumHost}}:{{config.StratumPort}} -ewal &lt;address&gt; -epsw x -eworker &lt;worker&gt;</p>
+    </span>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h4>Ваша статистика &amp; История выплат</h4>
+      <div class="input-group">
+        {{input value=cachedLogin class="form-control" placeholder="Введите сюда Ваш адрес Ethereum"}}
+        <span class="input-group-btn">
+          <button class="btn btn-primary" type="button" {{action 'lookup' cachedLogin}}>
+            <span style="display: inline;"><i class="fa fa-search"></i> Посмотреть</span>
+          </button>
+        </span>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <h4>Оценка заработка</h4>
+      <div class="input-group">
+        {{input value=cachedHashRate class="form-control" placeholder="Введите сюда Вашу скорость в MH/s"}}
+        <span class="input-group-btn">
+          <button class="btn btn-primary" type="button" {{action 'calculate' cachedHashRate}}>
+            <span style="display: inline;"><i class="fa fa-search"></i> Подсчитать</span>
+          </button>
+        </span>
+      </div>
+    </div>
+  </div>
+  <div class="row" id="calculation-result"></div>
 </div>

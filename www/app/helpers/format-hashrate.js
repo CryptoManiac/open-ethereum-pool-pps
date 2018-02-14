@@ -8,7 +8,7 @@ export function formatHashrate(params/*, hash*/) {
     hashrate = hashrate / 1000;
     i++;
   }
-  return hashrate.toFixed(2) + ' ' + units[i];
+  return hashrate.toFixed(2) + ' ' + units[i] + '/s';
 }
 
 export default Ember.Helper.helper(formatHashrate);

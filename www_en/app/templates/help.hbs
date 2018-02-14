@@ -1,0 +1,64 @@
+<div class="container">
+  <div class="page-header">
+    <h2>How To Mine</h2>
+  </div>
+  <p>In order to mine on this pool you need to have a stratum miner installation pointed to <code>{{config.StratumHost}}:{{config.StratumPort}}</code>
+  </p>
+   <p>
+    <strong>Usage example:</strong>
+    <code>EthDcrMiner64.exe -epool stratum+tcp://{{config.StratumHost}}:{{config.StratumPort}} -ewal YOUR_ETH_ADDRESS -epsw x -eworker RIG_ID</code>.<br/>
+  </p>
+  <dl class="dl-horizontal">
+    <dt>YOUR_ETH_ADDRESS</dt>
+    <dd>This is your address for payouts, generate one with geth, parity or 
+      <a href="https://www.myetherwallet.com/" rel="nofollow" target="_blank">MyEtherWallet</a>.<br/>
+      <strong>Example:</strong> <code>0x8d35067233605bef6069191ae0922d134ff80d48</code>.
+    </dd>
+    <dt>RIG_ID</dt>
+    <dd>
+      ID of your farm to distinguish it from your other rig. If you have just one rig, feel free to omit this param.
+      This param must be short alphanumeric string with optional dashes and underscores.<br/>
+      <strong>Example:</strong> <code>rig-1</code>
+    </dd>
+  </dl>
+
+  <p>It is also possible to set up a connection with Telegram bot:</p>
+  <dl class="dl-horizontal">
+    <dt>@rusethermine_bot</dt>
+    <dd>
+        Enter this name to search field and create chat with this user. Follow provided registration instructions.
+    </dd>
+  </dl>
+  <p>Bot is able to provide basic statistics for your account. Besides that, it will provide notifications in case of hardware malfunction.</p>
+
+  <div class="page-header">
+    <h2>Frequently asked questions</h2>
+  </div>
+  <dl class="dl-horizontal">
+    <dt>Question:</dt>
+    <dd>How does it work?</dd>
+    <dt>Answer:</dt>
+    <dd>We're using Pay-Per-Share approach (PPS). User's pending balance is being adjusted immediately after receiving new solution and successful confirmation of its validity.</dd>
+
+    <dt>Question:</dt>
+    <dd>I've set up configuration as it was proposed here and launched mining software. Though I didnt't receive any payments yet, it works for some time without any notable issues. Is this okay?</dd>
+    <dt>Answer:</dt>
+    <dd>Yes, it's completely okay. Payments are only done after {{config.PayoutThreshold}} payout threshold has been reached.</dd>
+
+    <dt>Question:</dt>
+    <dd>What does {{config.PayoutThreshold}} payout threshold mean? Am I going to receive payment immediatly after accounting such amount on my pending balance?</dd>
+    <dt>Answer:</dt>
+    <dd>Every 2 hours payment task is performed. Any user who has more than, or equal to {{config.PayoutThreshold}} pending balance is included into that task.</dd>
+
+    <dt>Question:</dt>
+    <dd>Is it possible to receive payment without reaching payout threshold?</dd>
+    <dt>Answer:</dt>
+    <dd>Short answer: no. Long version: sometimes administration is performing early payments manually, this can be done during maintenance or some critical situation. There is no established way to perform such payouts on user request, though.</dd>
+
+    <dt>Question:</dt>
+    <dd>Is it possible to withdraw my funds to another ethereum address, which doesn't match account address?</dd>
+    <dt>Answer:</dt>
+    <dd>No. The only exception can be made if you consider old address as compromised one. In order to prove that you should be ready to disclose private key of your old address. Note that our staff reserves a right to publish a list of collected private keys.</dd>
+  </dl>
+
+</div>
