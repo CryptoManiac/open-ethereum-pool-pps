@@ -59,7 +59,7 @@ func FormatRatReward(reward *big.Rat) string {
 
 func GetShareReward(shareDiff, netDiff int64, fee float64) float64 {
 	wei := new(big.Rat).SetInt(Ether)
-	wei.Mul(wei, new(big.Rat).SetInt64(5))
+	wei.Mul(wei, new(big.Rat).SetInt64(3))
 
 	feePercent := new(big.Rat).SetFloat64(fee / 100)
 	feeValue := new(big.Rat).Mul(wei, feePercent)
