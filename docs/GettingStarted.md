@@ -1,8 +1,8 @@
-# Rinning a PPS mining pool for beginners
+# Running a PPS mining pool for beginners
 
 First, I'll try to formulate a set of simple principles.
 
-1. Keep in mind that running PPS pool is RISKY. If you're not ready for that, please consider using rinsk-free PPLNS system.
+1. Keep in mind that running PPS pool is RISKY. If you're not ready for that, please consider using risk-free PPLNS system.
 2. Don't overestimate your ability to balance the incomings and payments. Mining is basically a roulette and outcomes of wrong decisions may be catastrophic.
 3. Keep your service as simple as possible. Please avoid implementation of unnecessary functionality. Your life is dependent on that, literally.
 
@@ -32,7 +32,7 @@ Just for example, let's pretend that you wish to mine ether with accepted risk o
 
 So you need to have 518.08 ETH locked in some offline wallet, just in case.
 
-# Veryfing that you're ready
+# Verifyng that you're ready
 
 You have estimated your risks and the basic parameters are chosen. It's always better to re-check your risk of bankruptcy using the following formula:
 
