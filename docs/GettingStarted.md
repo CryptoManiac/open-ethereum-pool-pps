@@ -10,7 +10,7 @@ First, I'll try to formulate a set of simple principles.
 
 In PPS system there is no luck for users, entire variance has to be balanced by the pool operator. This means that sometimes you will have fantastic income, but in other times you will have to pay more than you're earning.
 
-There are four factors in the PPS system, which are dependent on each other: risk of bankruptcy, mining fee and amount of reserves.
+There are three factors in the PPS system, which are dependent on each other: risk of bankruptcy, mining fee and amount of reserves.
 
 ## Risk of bankruptcy
 
