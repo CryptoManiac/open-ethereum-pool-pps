@@ -18,7 +18,7 @@ First, estimate your accepted risk of bankruptcy. For example, you can be ready 
 
 ## Mining fee
 
-Examine the market in order to discover acceptable fee ratio. FOr example, if there are no PPS pools with fee less than 2% then you can start with any value lower than or equal to 2%. You know, that's how free market works.
+Examine the market in order to discover acceptable fee ratio. For example, if there are no PPS pools with fee less than 2% then you can start with any value lower than or equal to 2%. You know, that's how free market works.
 
 ## Estimate amount of reserves
 
