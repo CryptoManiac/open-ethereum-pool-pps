@@ -32,7 +32,7 @@ Just for example, let's pretend that you wish to mine ether with accepted risk o
 
 So you need to have 518.08 ETH locked in some offline wallet, just in case.
 
-# Verifiyng that you're ready
+# Verifying that you're ready
 
 You have estimated your risks and the basic parameters are chosen. It's always better to re-check your risk of bankruptcy using the following formula:
 
