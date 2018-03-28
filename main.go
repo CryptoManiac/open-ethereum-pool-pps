@@ -30,11 +30,6 @@ func startApi() {
 	s.Start()
 }
 
-func startBlockUnlocker() {
-	u := payouts.NewBlockUnlocker(&cfg.BlockUnlocker, backend)
-	u.Start()
-}
-
 func startPayoutsProcessor() {
 	u := payouts.NewPayoutsProcessor(&cfg.Payouts, backend)
 	u.Start()
@@ -93,9 +88,6 @@ func main() {
 	}
 	if cfg.Api.Enabled {
 		go startApi()
-	}
-	if cfg.BlockUnlocker.Enabled {
-		go startBlockUnlocker()
 	}
 	if cfg.Payouts.Enabled {
 		go startPayoutsProcessor()

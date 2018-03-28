@@ -239,29 +239,6 @@ otherwise you will get errors on start because of JSON comments.**
     "password": ""
   },
 
-  // This module periodically remits ether to miners
-  "unlocker": {
-    "enabled": false,
-    // Pool fee percentage
-    "poolFee": 1.0,
-    // Pool fees beneficiary address (leave it blank to disable fee withdrawals)
-    "poolFeeAddress": "",
-    // Donate 10% from pool fees to developers
-    "donate": true,
-    // Unlock only if this number of blocks mined back
-    "depth": 120,
-    // Simply don't touch this option
-    "immatureDepth": 20,
-    // Keep mined transaction fees as pool fees
-    "keepTxFees": false,
-    // Run unlocker in this interval
-    "interval": "10m",
-    // Geth instance node rpc endpoint for unlocking blocks
-    "daemon": "http://127.0.0.1:8545",
-    // Rise error if can't reach geth in this amount of time
-    "timeout": "10s"
-  },
-
   // Pay out miners using this module
   "payouts": {
     "enabled": false,
@@ -294,29 +271,20 @@ create several configs and disable unneeded modules on each server. (Advanced us
 I recommend this deployment strategy:
 
 * Mining instance - 1x (it depends, you can run one node for EU, one for US, one for Asia)
-* Unlocker and payouts instance - 1x each (strict!)
+* Payouts instance - 1x (strict!)
 * API instance - 1x
 
 ### Notes
 
-* Unlocking and payouts are sequential, 1st tx go, 2nd waiting for 1st to confirm and so on. You can disable that in code. Carefully read `docs/PAYOUTS.md`.
-* Also, keep in mind that **unlocking and payouts will halt in case of backend or node RPC errors**. In that case check everything and restart.
+* Payouts are sequential, 1st tx go, 2nd waiting for 1st to confirm and so on. You can disable that in code. Carefully read `docs/PAYOUTS.md`.
+* Also, keep in mind that **payouts will halt in case of backend or node RPC errors**. In that case check everything and restart.
 * You must restart module if you see errors with the word *suspended*.
-* Don't run payouts and unlocker modules as part of mining node. Create separate configs for both, launch independently and make sure you have a single instance of each module running.
-* If `poolFeeAddress` is not specified all pool profit will remain on coinbase address. If it specified, make sure to periodically send some dust back required for payments.
+* Don't run payouts module as part of mining node. Create separate configs for both, launch independently and make sure you have a single instance of each module running.
 
 ### Alternative Ethereum Implementations
 
-This pool is tested to work with [Ethcore's Parity](https://github.com/ethcore/parity). Mining and block unlocking works, but I am not sure about payouts and suggest to run *official* geth node for payments.
+This pool is tested to work with [Ethcore's Parity](https://github.com/ethcore/parity).
 
 ### Credits
 
-Made by sammy007. Licensed under GPLv3.
-
-#### Contributors
-
-[Alex Leverington](https://github.com/subtly)
-
-### Donations
-
-ETH/ETC: 0xb85150eb365e7df0941f0cf08235f987ba91506a
+Original code made by sammy007. Licensed under GPLv3.

@@ -80,10 +80,6 @@
 		"password": ""
 	},
 
-	"unlocker": {
-		"enabled": false
-	},
-
 	"payouts": {
 		"enabled": false,
 		"requirePeers": 25,
