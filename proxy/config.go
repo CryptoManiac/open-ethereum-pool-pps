@@ -35,6 +35,7 @@ type Proxy struct {
 	BehindReverseProxy   bool   `json:"behindReverseProxy"`
 	BlockRefreshInterval string `json:"blockRefreshInterval"`
 	Difficulty           int64  `json:"difficulty"`
+	MiningFee            float64 `json:"miningFee"`
 	StateUpdateInterval  string `json:"stateUpdateInterval"`
 	HashrateExpiration   string `json:"hashrateExpiration"`
 

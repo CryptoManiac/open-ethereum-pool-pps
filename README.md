@@ -141,6 +141,8 @@ otherwise you will get errors on start because of JSON comments.**
     "stateUpdateInterval": "3s",
     // Require this share difficulty from miners
     "difficulty": 2000000000,
+    // PPS fee applied to each share submitted
+    "miningFee": 1.5,
 
     /* Reply error to miner instead of job if redis is unavailable.
       Should save electricity to miners if pool is sick and they didn't set up failovers.
