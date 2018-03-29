@@ -1,8 +1,10 @@
 ## Open Source Ethereum Mining Pool
 
-**PPS version**
+**PoT version**
 
 Please consider reading docs/GettingStarted.md first.
+
+PoT is essentially the same as PPS but with artificially created variance.
 
 ### Features
 
@@ -141,6 +143,10 @@ otherwise you will get errors on start because of JSON comments.**
     "difficulty": 2000000000,
     // PPS fee applied to each share submitted
     "miningFee": 1.5,
+    // Mediocre shares are getting just about 20% of average reward
+    "potA": 0.8,
+    // Cap share difficulty to x1.5 of network difficulty to prevent ridicuosly difficult share from bankrupting the pool
+    "potCap": 1.5,
 
     /* Reply error to miner instead of job if redis is unavailable.
       Should save electricity to miners if pool is sick and they didn't set up failovers.
