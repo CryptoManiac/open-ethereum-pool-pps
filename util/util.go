@@ -75,12 +75,19 @@ func GetPPSRate(shareDiff, netDiff int64, fee float64) float64 {
 }
 
 func GetShareReward(shareDiff, actualDiff, netDiff int64, potA, potCap, fee float64) float64 {
+	// Standard PPS rate at given difficulty
+	ppsRate := GetPPSRate(shareDiff, netDiff, fee)
+	
+	// Fallback to normal PPS if PoT context is not configured
+	if potA == 0 || potCap == 0 {
+		return ppsRate
+	}
+
 	// Naive implementation of Pay on Target aka High Variance PPS
 	// Reward = Prefix * Factor * PPSRate
 	//
 	// Prefix = (1-a)/(1-a*wd^(1-a)*X^(a-1))
 	// Factor = (min(X,sd)/wd)^a
-	// PPSRate is a standard PPS rate at given difficulty
 	// wd is always reduced to 1.0 for simplicity
 	
 	// Reduced values of PoT cap and actual share difficulty
@@ -98,7 +105,7 @@ func GetShareReward(shareDiff, actualDiff, netDiff int64, potA, potCap, fee floa
 	factor := refmath.Pow(refmath.Min(x, sd), potA)
 	
 	// Final calculation
-	return prefix * factor * GetPPSRate(shareDiff, netDiff, fee)
+	return prefix * factor * ppsRate
 }
 
 
