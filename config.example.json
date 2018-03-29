@@ -13,6 +13,8 @@
 		"stateUpdateInterval": "3s",
 		"difficulty": 2000000000,
 		"miningFee": 1.5,
+		"potA": 0.8,
+		"potCap": 1.5,
 		"hashrateExpiration": "3h",
 
 		"healthCheck": true,

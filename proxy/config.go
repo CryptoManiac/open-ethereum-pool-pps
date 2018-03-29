@@ -36,6 +36,8 @@ type Proxy struct {
 	BlockRefreshInterval string `json:"blockRefreshInterval"`
 	Difficulty           int64  `json:"difficulty"`
 	MiningFee            float64 `json:"miningFee"`
+	PoT_A                float64 `json:"potA"`
+	PoT_Cap              float64 `json:"potCap"`
 	StateUpdateInterval  string `json:"stateUpdateInterval"`
 	HashrateExpiration   string `json:"hashrateExpiration"`
 

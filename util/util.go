@@ -1,6 +1,7 @@
 package util
 
 import (
+	refmath "math"
 	"math/big"
 	"regexp"
 	"strconv"
@@ -57,22 +58,41 @@ func FormatRatReward(reward *big.Rat) string {
 	return reward.FloatString(8)
 }
 
-func GetShareReward(shareDiff, netDiff int64, fee float64) float64 {
+func GetShareReward(shareDiff, actualDiff, netDiff int64, potA, potCap, fee float64) float64 {
+	// Naive implementation of Pay on Target aka High Variance PPS
+	// Prefix * PotFactor * PPSRate
+
+	// Calculate current PPS rate
 	wei := new(big.Rat).SetInt(Ether)
 	wei.Mul(wei, new(big.Rat).SetInt64(3))
-
 	feePercent := new(big.Rat).SetFloat64(fee / 100)
 	feeValue := new(big.Rat).Mul(wei, feePercent)
-
 	wei.Sub(wei, feeValue)
 	wei.Mul(wei, new(big.Rat).SetInt64(shareDiff))
 	wei.Quo(wei, new(big.Rat).SetInt64(netDiff))
-
 	shannon := new(big.Rat).SetInt(Shannon)
 	inShannon := new(big.Rat).Quo(wei, shannon)
-	value, _ := inShannon.Float64()
+	ppsRate, _ := inShannon.Float64()
+	
+	// PoT cap value
+	X, _ := new(big.Rat).Quo(new(big.Rat).SetInt64(netDiff), new(big.Rat).SetInt64(shareDiff)).Float64()
+	X *= potCap
+	
+	// Actual share difficulty
+	SD, _ := new(big.Rat).Quo(new(big.Rat).SetInt64(actualDiff), new(big.Rat).SetInt64(shareDiff)).Float64()
 
-	return value
+	// Applying Cap
+	if SD > X {
+		SD = X
+	}
+
+	// Calculate PoT prefix
+	// (1-a)/(1-a*wd^(1-a)*X^(a-1))
+	// wd is always 1.0 for simplicity
+	prefix := (1 - potA) / (1 - potA * refmath.Pow(X, potA - 1))
+	
+	// Final calculation
+	return prefix * refmath.Pow(SD, potA) * ppsRate
 }
 
 
