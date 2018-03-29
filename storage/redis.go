@@ -594,7 +594,7 @@ func (r *RedisClient) FlushStaleStats(window, largeWindow time.Duration) (int64,
 	return total, nil
 }
 
-func (r *RedisClient) CollectStats(smallWindow time.Duration, maxBlocks, maxPayments int64) (map[string]interface{}, error) {
+func (r *RedisClient) CollectStats(smallWindow time.Duration, maxPayments int64) (map[string]interface{}, error) {
 	window := int64(smallWindow / time.Second)
 	stats := make(map[string]interface{})
 
@@ -608,13 +608,9 @@ func (r *RedisClient) CollectStats(smallWindow time.Duration, maxBlocks, maxPaym
 		tx.ZRangeWithScores(r.formatKey("hashrate"), 0, -1)
 		tx.HGetAllMap(r.formatKey("stats"))
 		tx.ZRevRangeWithScores(r.formatKey("blocks", "candidates"), 0, -1)
-		tx.ZRevRangeWithScores(r.formatKey("blocks", "immature"), 0, -1)
-		tx.ZRevRangeWithScores(r.formatKey("blocks", "matured"), 0, maxBlocks-1)
-		tx.ZCard(r.formatKey("blocks", "candidates"))
-		tx.ZCard(r.formatKey("blocks", "immature"))
-		tx.ZCard(r.formatKey("blocks", "matured"))
-		tx.ZCard(r.formatKey("payments", "all"))
 		tx.ZRevRangeWithScores(r.formatKey("payments", "all"), 0, maxPayments-1)
+		tx.ZCard(r.formatKey("blocks", "candidates"))
+		tx.ZCard(r.formatKey("payments", "all"))
 		return nil
 	})
 
@@ -626,19 +622,11 @@ func (r *RedisClient) CollectStats(smallWindow time.Duration, maxBlocks, maxPaym
 	stats["stats"] = convertStringMap(result)
 	candidates := convertCandidateResults(cmds[3].(*redis.ZSliceCmd))
 	stats["candidates"] = candidates
-	stats["candidatesTotal"] = cmds[6].(*redis.IntCmd).Val()
+	stats["candidatesTotal"] = cmds[5].(*redis.IntCmd).Val()
 
-	immature := convertBlockResults(cmds[4].(*redis.ZSliceCmd))
-	stats["immature"] = immature
-	stats["immatureTotal"] = cmds[7].(*redis.IntCmd).Val()
-
-	matured := convertBlockResults(cmds[5].(*redis.ZSliceCmd))
-	stats["matured"] = matured
-	stats["maturedTotal"] = cmds[8].(*redis.IntCmd).Val()
-
-	payments := convertPaymentsResults(cmds[10].(*redis.ZSliceCmd))
+	payments := convertPaymentsResults(cmds[4].(*redis.ZSliceCmd))
 	stats["payments"] = payments
-	stats["paymentsTotal"] = cmds[9].(*redis.IntCmd).Val()
+	stats["paymentsTotal"] = cmds[6].(*redis.IntCmd).Val()
 
 	totalHashrate, miners := convertMinersStats(window, cmds[1].(*redis.ZSliceCmd))
 	stats["miners"] = miners
