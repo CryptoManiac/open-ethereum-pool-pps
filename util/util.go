@@ -58,10 +58,7 @@ func FormatRatReward(reward *big.Rat) string {
 	return reward.FloatString(8)
 }
 
-func GetShareReward(shareDiff, actualDiff, netDiff int64, potA, potCap, fee float64) float64 {
-	// Naive implementation of Pay on Target aka High Variance PPS
-	// Prefix * PotFactor * PPSRate
-
+func GetPPSRate(shareDiff, netDiff int64, fee float64) float64 {
 	// Calculate current PPS rate
 	wei := new(big.Rat).SetInt(Ether)
 	wei.Mul(wei, new(big.Rat).SetInt64(3))
@@ -74,25 +71,34 @@ func GetShareReward(shareDiff, actualDiff, netDiff int64, potA, potCap, fee floa
 	inShannon := new(big.Rat).Quo(wei, shannon)
 	ppsRate, _ := inShannon.Float64()
 	
-	// PoT cap value
-	X, _ := new(big.Rat).Quo(new(big.Rat).SetInt64(netDiff), new(big.Rat).SetInt64(shareDiff)).Float64()
-	X *= potCap
+	return ppsRate
+}
+
+func GetShareReward(shareDiff, actualDiff, netDiff int64, potA, potCap, fee float64) float64 {
+	// Naive implementation of Pay on Target aka High Variance PPS
+	// Reward = Prefix * Factor * PPSRate
+	//
+	// Prefix = (1-a)/(1-a*wd^(1-a)*X^(a-1))
+	// Factor = (min(X,sd)/wd)^a
+	// PPSRate is a standard PPS rate at given difficulty
+	// wd is always reduced to 1.0 for simplicity
 	
-	// Actual share difficulty
-	SD, _ := new(big.Rat).Quo(new(big.Rat).SetInt64(actualDiff), new(big.Rat).SetInt64(shareDiff)).Float64()
-
-	// Applying Cap
-	if SD > X {
-		SD = X
+	// Reduced values of PoT cap and actual share difficulty
+	x, sd := float64(0), float64(0)
+	{
+		nominalDiff := new(big.Rat).SetInt64(shareDiff)
+		SD := new(big.Rat).Quo(new(big.Rat).SetInt64(actualDiff), nominalDiff)
+		X  := new(big.Rat).Quo(new(big.Rat).SetInt64(netDiff), nominalDiff)
+		X.Mul(X, new(big.Rat).SetFloat64(potCap))
+		sd, _ = SD.Float64()
+		x, _ = X.Float64()
 	}
-
-	// Calculate PoT prefix
-	// (1-a)/(1-a*wd^(1-a)*X^(a-1))
-	// wd is always 1.0 for simplicity
-	prefix := (1 - potA) / (1 - potA * refmath.Pow(X, potA - 1))
+	
+	prefix := (1 - potA) / (1 - potA * refmath.Pow(x, potA - 1))
+	factor := refmath.Pow(refmath.Min(x, sd), potA)
 	
 	// Final calculation
-	return prefix * refmath.Pow(SD, potA) * ppsRate
+	return prefix * factor * GetPPSRate(shareDiff, netDiff, fee)
 }
 
 
