@@ -99,7 +99,7 @@
 	"shifts": {
 		"enabled": false,
 		"interval": "24h"
-	}
+	},
 
 	"newrelicEnabled": false,
 	"newrelicName": "MyEtherProxy",
