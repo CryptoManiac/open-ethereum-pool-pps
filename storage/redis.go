@@ -447,6 +447,32 @@ func (r *RedisClient) RollbackBalance(login string, amount int64) error {
 	return err
 }
 
+func (r *RedisClient) WriteShift(login string) error {
+	tx := r.client.Multi()
+	defer tx.Close()
+	
+	
+	ts := util.MakeTimestamp() / 1000
+
+	cmds, _ := tx.Exec(func() error {
+		tx.HGet(r.formatKey("miners", login), "minedCurrent")
+		tx.HGet(r.formatKey("miners", login), "hashesCurrent")
+		return nil
+	})
+	
+	mined, _ := cmds[0].(*redis.StringCmd).Float64()
+	hashes, _ := cmds[1].(*redis.StringCmd).Int64()
+	
+	_, err := tx.Exec(func() error {
+		tx.HSet(r.formatKey("miners", login), "minedCurrent", "0")
+		tx.HSet(r.formatKey("miners", login), "hashesCurrent", "0")
+		tx.ZAdd(r.formatKey("shifts", login), redis.Z{Score: float64(ts), Member: join(mined, hashes)})
+		return nil
+	})
+	
+	return err
+}
+
 func (r *RedisClient) WritePayment(login, txHash string, amount int64) error {
 	tx := r.client.Multi()
 	defer tx.Close()

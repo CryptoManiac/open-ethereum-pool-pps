@@ -13,6 +13,7 @@ import (
 
 	"github.com/sammy007/open-ethereum-pool/api"
 	"github.com/sammy007/open-ethereum-pool/payouts"
+	"github.com/sammy007/open-ethereum-pool/shifts"
 	"github.com/sammy007/open-ethereum-pool/proxy"
 	"github.com/sammy007/open-ethereum-pool/storage"
 )
@@ -33,6 +34,11 @@ func startApi() {
 func startPayoutsProcessor() {
 	u := payouts.NewPayoutsProcessor(&cfg.Payouts, backend)
 	u.Start()
+}
+
+func startShiftsProcessor() {
+	p := shifts.NewShiftsProcessor(&cfg.Shifts, backend)
+	p.Start()
 }
 
 func startNewrelic() {
@@ -91,6 +97,9 @@ func main() {
 	}
 	if cfg.Payouts.Enabled {
 		go startPayoutsProcessor()
+	}
+	if cfg.Shifts.Enabled {
+		go startShiftsProcessor()
 	}
 	quit := make(chan bool)
 	<-quit
