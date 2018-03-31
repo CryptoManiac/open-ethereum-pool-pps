@@ -1,11 +1,11 @@
 package proxy
 
 import (
-	"github.com/sammy007/open-ethereum-pool/api"
-	"github.com/sammy007/open-ethereum-pool/payouts"
-	"github.com/sammy007/open-ethereum-pool/shifts"
-	"github.com/sammy007/open-ethereum-pool/policy"
-	"github.com/sammy007/open-ethereum-pool/storage"
+	"github.com/CryptoManiac/open-ethereum-pool/api"
+	"github.com/CryptoManiac/open-ethereum-pool/payouts"
+	"github.com/CryptoManiac/open-ethereum-pool/shifts"
+	"github.com/CryptoManiac/open-ethereum-pool/policy"
+	"github.com/CryptoManiac/open-ethereum-pool/storage"
 )
 
 type Config struct {

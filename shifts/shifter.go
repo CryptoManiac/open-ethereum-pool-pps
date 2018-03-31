@@ -4,8 +4,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/sammy007/open-ethereum-pool/storage"
-	"github.com/sammy007/open-ethereum-pool/util"
+	"github.com/CryptoManiac/open-ethereum-pool/storage"
+	"github.com/CryptoManiac/open-ethereum-pool/util"
 )
 
 type ShiftsConfig struct {

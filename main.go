@@ -9,11 +9,11 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/sammy007/open-ethereum-pool/api"
-	"github.com/sammy007/open-ethereum-pool/payouts"
-	"github.com/sammy007/open-ethereum-pool/shifts"
-	"github.com/sammy007/open-ethereum-pool/proxy"
-	"github.com/sammy007/open-ethereum-pool/storage"
+	"github.com/CryptoManiac/open-ethereum-pool/api"
+	"github.com/CryptoManiac/open-ethereum-pool/payouts"
+	"github.com/CryptoManiac/open-ethereum-pool/shifts"
+	"github.com/CryptoManiac/open-ethereum-pool/proxy"
+	"github.com/CryptoManiac/open-ethereum-pool/storage"
 )
 
 var cfg proxy.Config
