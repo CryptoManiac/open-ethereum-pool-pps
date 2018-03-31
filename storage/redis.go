@@ -47,27 +47,6 @@ type BlockData struct {
 	immatureKey    string
 }
 
-func (b *BlockData) RewardInShannon() int64 {
-	reward := new(big.Int).Div(b.Reward, util.Shannon)
-	return reward.Int64()
-}
-
-func (b *BlockData) serializeHash() string {
-	if len(b.Hash) > 0 {
-		return b.Hash
-	} else {
-		return "0x0"
-	}
-}
-
-func (b *BlockData) RoundKey() string {
-	return join(b.RoundHeight, b.Hash)
-}
-
-func (b *BlockData) key() string {
-	return join(b.UncleHeight, b.Orphan, b.Nonce, b.serializeHash(), b.Timestamp, b.Difficulty, b.TotalShares, b.Reward)
-}
-
 type Miner struct {
 	LastBeat  int64 `json:"lastBeat"`
 	HR        int64 `json:"hr"`
@@ -306,15 +285,6 @@ func (r *RedisClient) GetCandidates(maxHeight int64) ([]*BlockData, error) {
 	return convertCandidateResults(cmd), nil
 }
 
-func (r *RedisClient) GetImmatureBlocks(maxHeight int64) ([]*BlockData, error) {
-	option := redis.ZRangeByScore{Min: "0", Max: strconv.FormatInt(maxHeight, 10)}
-	cmd := r.client.ZRangeByScoreWithScores(r.formatKey("blocks", "immature"), option)
-	if cmd.Err() != nil {
-		return nil, cmd.Err()
-	}
-	return convertBlockResults(cmd), nil
-}
-
 func (r *RedisClient) GetRoundShares(height int64, nonce string) (map[string]int64, error) {
 	result := make(map[string]int64)
 	cmd := r.client.HGetAllMap(r.formatRound(height, nonce))
@@ -495,67 +465,6 @@ func (r *RedisClient) WritePayment(login, txHash string, amount int64) error {
 		return nil
 	})
 	return err
-}
-
-func (r *RedisClient) WriteImmatureBlock(block *BlockData) error {
-	tx := r.client.Multi()
-	defer tx.Close()
-
-	_, err := tx.Exec(func() error {
-		r.writeImmatureBlock(tx, block)
-		return nil
-	})
-	return err
-}
-
-func (r *RedisClient) WriteMaturedBlock(block *BlockData) error {
-	tx := r.client.Multi()
-	defer tx.Close()
-
-	_, err := tx.Exec(func() error {
-		r.writeMaturedBlock(tx, block)
-		return nil
-	})
-	return err
-}
-
-func (r *RedisClient) WriteOrphan(block *BlockData) error {
-	tx := r.client.Multi()
-	defer tx.Close()
-
-	_, err := tx.Exec(func() error {
-		r.writeMaturedBlock(tx, block)
-		return nil
-	})
-	return err
-}
-
-func (r *RedisClient) WritePendingOrphans(blocks []*BlockData) error {
-	tx := r.client.Multi()
-	defer tx.Close()
-
-	_, err := tx.Exec(func() error {
-		for _, block := range blocks {
-			r.writeImmatureBlock(tx, block)
-		}
-		return nil
-	})
-	return err
-}
-
-func (r *RedisClient) writeImmatureBlock(tx *redis.Multi, block *BlockData) {
-	// Redis 2.8.x returns "ERR source and destination objects are the same"
-	if block.Height != block.RoundHeight {
-		tx.Rename(r.formatRound(block.RoundHeight, block.Nonce), r.formatRound(block.Height, block.Nonce))
-	}
-	tx.ZRem(r.formatKey("blocks", "candidates"), block.candidateKey)
-	tx.ZAdd(r.formatKey("blocks", "immature"), redis.Z{Score: float64(block.Height), Member: block.key()})
-}
-
-func (r *RedisClient) writeMaturedBlock(tx *redis.Multi, block *BlockData) {
-	tx.Del(r.formatRound(block.RoundHeight, block.Nonce))
-	tx.ZRem(r.formatKey("blocks", "immature"), block.immatureKey)
-	tx.ZAdd(r.formatKey("blocks", "matured"), redis.Z{Score: float64(block.Height), Member: block.key()})
 }
 
 func (r *RedisClient) IsMinerExists(login string) (bool, error) {
@@ -750,60 +659,6 @@ func (r *RedisClient) CollectWorkersStats(sWindow, lWindow time.Duration, login 
 	return stats, nil
 }
 
-func (r *RedisClient) CollectLuckStats(windows []int) (map[string]interface{}, error) {
-	stats := make(map[string]interface{})
-
-	tx := r.client.Multi()
-	defer tx.Close()
-
-	max := int64(windows[len(windows)-1])
-
-	cmds, err := tx.Exec(func() error {
-		tx.ZRevRangeWithScores(r.formatKey("blocks", "immature"), 0, -1)
-		tx.ZRevRangeWithScores(r.formatKey("blocks", "matured"), 0, max-1)
-		return nil
-	})
-	if err != nil {
-		return stats, err
-	}
-	blocks := convertBlockResults(cmds[0].(*redis.ZSliceCmd), cmds[1].(*redis.ZSliceCmd))
-
-	calcLuck := func(max int) (int, float64, float64, float64) {
-		var total int
-		var sharesDiff, uncles, orphans float64
-		for i, block := range blocks {
-			if i > (max - 1) {
-				break
-			}
-			if block.Uncle {
-				uncles++
-			}
-			if block.Orphan {
-				orphans++
-			}
-			sharesDiff += float64(block.TotalShares) / float64(block.Difficulty)
-			total++
-		}
-		if total > 0 {
-			sharesDiff /= float64(total)
-			uncles /= float64(total)
-			orphans /= float64(total)
-		}
-		return total, sharesDiff, uncles, orphans
-	}
-	for _, max := range windows {
-		total, sharesDiff, uncleRate, orphanRate := calcLuck(max)
-		row := map[string]float64{
-			"luck": sharesDiff, "uncleRate": uncleRate, "orphanRate": orphanRate,
-		}
-		stats[strconv.Itoa(total)] = row
-		if total < max {
-			break
-		}
-	}
-	return stats, nil
-}
-
 func convertCandidateResults(raw *redis.ZSliceCmd) []*BlockData {
 	var result []*BlockData
 	for _, v := range raw.Val() {
@@ -820,32 +675,6 @@ func convertCandidateResults(raw *redis.ZSliceCmd) []*BlockData {
 		block.TotalShares, _ = strconv.ParseInt(fields[5], 10, 64)
 		block.candidateKey = v.Member.(string)
 		result = append(result, &block)
-	}
-	return result
-}
-
-func convertBlockResults(rows ...*redis.ZSliceCmd) []*BlockData {
-	var result []*BlockData
-	for _, row := range rows {
-		for _, v := range row.Val() {
-			// "uncleHeight:orphan:nonce:blockHash:timestamp:diff:totalShares:rewardInWei"
-			block := BlockData{}
-			block.Height = int64(v.Score)
-			block.RoundHeight = block.Height
-			fields := strings.Split(v.Member.(string), ":")
-			block.UncleHeight, _ = strconv.ParseInt(fields[0], 10, 64)
-			block.Uncle = block.UncleHeight > 0
-			block.Orphan, _ = strconv.ParseBool(fields[1])
-			block.Nonce = fields[2]
-			block.Hash = fields[3]
-			block.Timestamp, _ = strconv.ParseInt(fields[4], 10, 64)
-			block.Difficulty, _ = strconv.ParseInt(fields[5], 10, 64)
-			block.TotalShares, _ = strconv.ParseInt(fields[6], 10, 64)
-			block.RewardString = fields[7]
-			block.ImmatureReward = fields[7]
-			block.immatureKey = v.Member.(string)
-			result = append(result, &block)
-		}
 	}
 	return result
 }
