@@ -46,7 +46,12 @@ func (u *ShiftsProcessor) Start() {
 }
 
 func (u *ShiftsProcessor) process() {
-	users, _ := u.backend.GetPayees()
+	users, err := u.backend.GetMiners()
+	if err != nil {
+		log.Println("Error while retrieving payees from backend:", err)
+		return
+	}
+	
 	shiftsDone := 0
 	for _, login := range users {
 		u.backend.WriteShift(login)

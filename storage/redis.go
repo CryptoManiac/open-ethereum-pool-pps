@@ -285,7 +285,7 @@ func (r *RedisClient) GetCandidates(maxHeight int64) ([]*BlockData, error) {
 	return convertCandidateResults(cmd), nil
 }
 
-func (r *RedisClient) GetPayees() ([]string, error) {
+func (r *RedisClient) GetMiners() ([]string, error) {
 	payees := make(map[string]struct{})
 	var result []string
 	var c int64
