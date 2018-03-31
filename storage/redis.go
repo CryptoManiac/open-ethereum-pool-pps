@@ -285,20 +285,6 @@ func (r *RedisClient) GetCandidates(maxHeight int64) ([]*BlockData, error) {
 	return convertCandidateResults(cmd), nil
 }
 
-func (r *RedisClient) GetRoundShares(height int64, nonce string) (map[string]int64, error) {
-	result := make(map[string]int64)
-	cmd := r.client.HGetAllMap(r.formatRound(height, nonce))
-	if cmd.Err() != nil {
-		return nil, cmd.Err()
-	}
-	sharesMap, _ := cmd.Result()
-	for login, v := range sharesMap {
-		n, _ := strconv.ParseInt(v, 10, 64)
-		result[login] = n
-	}
-	return result, nil
-}
-
 func (r *RedisClient) GetPayees() ([]string, error) {
 	payees := make(map[string]struct{})
 	var result []string
