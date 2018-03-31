@@ -17,7 +17,7 @@
       <div class="col-md-4 stats">
         {{#if model.stats.lastShare}}
         <div style="display: block;"><i class="fa fa-clock-o"></i>
-          Крайнее решение: <span>{{format-relative (seconds-to-ms (string-to-int model.stats.lastShare))}}</span> (<span>{{with-metric-prefix model.stats.lastShareDiff}}</span>)
+          Крайнее решение: <span>{{format-relative (seconds-to-ms (string-to-int model.stats.lastShare))}}</span> {{#if model.stats.lastShareDiff}}(<span>{{with-metric-prefix model.stats.lastShareDiff}}</span>){{/if}}
         </div>
         {{/if}}
         <div style="display: block;"><i class="fa fa-microchip"></i> Машин в сети: <span>{{format-number model.workersOnline}}</span></div>
@@ -27,7 +27,9 @@
       <div class="col-md-4 stats">
         <div style="display: block;"><i class="fa fa-cubes"></i> Блоков найдено: <span>{{format-number model.stats.blocksFound fallback='0'}}</span></div>
         <div style="display: block;"><i class="fa fa-paper-plane-o"></i> Проведено выплат: <span>{{format-number model.paymentsTotal}}</span></div>
+        {{#if model.stats.hashesCurrent}}
         <div style="display: block;"><i class="fa fa-gears"></i> Хэшей сегодня: <span>{{with-metric-prefix model.stats.hashesCurrent}}</span></div>
+        {{/if}}
         <div style="display: block;">
           <i class="fa fa-clock-o"></i>
           Смена эпохи: <span>{{format-relative applicationController.nextEpoch units="hour"}}</span>
