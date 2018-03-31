@@ -285,6 +285,7 @@ I recommend this deployment strategy:
 
 * Mining instance - 1x (it depends, you can run one node for EU, one for US, one for Asia)
 * Payouts instance - 1x (strict!)
+* Shifting instance - 1x (strict!)
 * API instance - 1x
 
 ### Notes
@@ -292,7 +293,7 @@ I recommend this deployment strategy:
 * Payouts are sequential, 1st tx go, 2nd waiting for 1st to confirm and so on. You can disable that in code. Carefully read `docs/PAYOUTS.md`.
 * Also, keep in mind that **payouts will halt in case of backend or node RPC errors**. In that case check everything and restart.
 * You must restart module if you see errors with the word *suspended*.
-* Don't run payouts module as part of mining node. Create separate configs for both, launch independently and make sure you have a single instance of each module running.
+* Don't run either payouts or shifting  module as part of mining node. Create separate configs for them, launch independently and make sure you have a single instance of each module running.
 
 ### Alternative Ethereum Implementations
 
