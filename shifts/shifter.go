@@ -31,7 +31,7 @@ func (u *ShiftsProcessor) Start() {
 	log.Printf("Set shifts interval to %v", intv)
 
 	// Immediately process payouts after start
-	u.process()
+	// u.process()
 	timer.Reset(intv)
 
 	go func() {
