@@ -267,6 +267,13 @@ otherwise you will get errors on start because of JSON comments.**
     "threshold": 500000000,
     // Perform BGSAVE on Redis after successful payouts session
     "bgsave": false
+  },
+  
+  // Maintain daily shifts of per-user statistics
+  "shifts": {
+    "enabled": false,
+    // Run in this interval
+    "interval": "24h"
   }
 }
 ```
