@@ -20,6 +20,7 @@ type Config struct {
 	Redis storage.Config `json:"redis"`
 
 	Payouts       payouts.PayoutsConfig  `json:"payouts"`
+	Shifts        shifts.ShiftsConfig  `json:"shifts"`
 
 	NewrelicName    string `json:"newrelicName"`
 	NewrelicKey     string `json:"newrelicKey"`
