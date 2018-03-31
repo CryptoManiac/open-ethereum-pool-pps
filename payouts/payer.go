@@ -110,7 +110,7 @@ func (u *PayoutsProcessor) process() {
 	mustPay := 0
 	minersPaid := 0
 	totalAmount := big.NewInt(0)
-	payees, err := u.backend.GetPayees()
+	payees, err := u.backend.GetMiners()
 	if err != nil {
 		log.Println("Error while retrieving payees from backend:", err)
 		return
