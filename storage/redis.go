@@ -245,12 +245,16 @@ func (r *RedisClient) WriteBlock(login, id string, params []string, diff int64, 
 }
 
 func (r *RedisClient) writeShare(tx *redis.Multi, ms, ts int64, login, id string, diff int64, actualDiff int64, fee float64, netDiff int64, expire time.Duration) {
-	tx.HIncrByFloat(r.formatKey("miners", login), "balance", util.GetShareReward(diff, netDiff, fee))
+	reward := util.GetShareReward(diff, netDiff, fee)
+	tx.HIncrByFloat(r.formatKey("miners", login), "balance", reward)
+	tx.HIncrByFloat(r.formatKey("miners", login), "minedCurrent", reward)
+	tx.HIncrBy(r.formatKey("miners", login), "hashesCurrent", diff)
 	tx.HIncrBy(r.formatKey("shares", "roundCurrent"), login, diff)
 	tx.ZAdd(r.formatKey("hashrate"), redis.Z{Score: float64(ts), Member: join(diff, login, id, ms)})
 	tx.ZAdd(r.formatKey("hashrate", login), redis.Z{Score: float64(ts), Member: join(diff, id, ms)})
 	tx.Expire(r.formatKey("hashrate", login), expire) // Will delete hashrates for miners that gone
 	tx.HSet(r.formatKey("miners", login), "lastShare", strconv.FormatInt(ts, 10))
+	tx.HSet(r.formatKey("miners", login), "lastShareDiff", strconv.FormatInt(actualDiff, 10))
 }
 
 func (r *RedisClient) formatKey(args ...interface{}) string {
