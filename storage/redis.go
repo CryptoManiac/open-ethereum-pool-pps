@@ -460,8 +460,12 @@ func (r *RedisClient) WriteShift(login string) error {
 		return nil
 	})
 	
-	mined, _ := cmds[0].(*redis.StringCmd).Float64()
 	hashes, _ := cmds[1].(*redis.StringCmd).Int64()
+	mined, _ := cmds[0].(*redis.StringCmd).Float64()
+	
+	if hashes == 0 {
+		return nil
+	}
 	
 	_, err := tx.Exec(func() error {
 		tx.HSet(r.formatKey("miners", login), "minedCurrent", "0")
