@@ -22,11 +22,6 @@ type Config struct {
 
 	Payouts       payouts.PayoutsConfig  `json:"payouts"`
 	Shifts        shifts.ShiftsConfig  `json:"shifts"`
-
-	NewrelicName    string `json:"newrelicName"`
-	NewrelicKey     string `json:"newrelicKey"`
-	NewrelicVerbose bool   `json:"newrelicVerbose"`
-	NewrelicEnabled bool   `json:"newrelicEnabled"`
 }
 
 type Proxy struct {

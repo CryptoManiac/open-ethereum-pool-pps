@@ -9,8 +9,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/yvasiyarov/gorelic"
-
 	"github.com/sammy007/open-ethereum-pool/api"
 	"github.com/sammy007/open-ethereum-pool/payouts"
 	"github.com/sammy007/open-ethereum-pool/shifts"
@@ -41,16 +39,6 @@ func startShiftsProcessor() {
 	p.Start()
 }
 
-func startNewrelic() {
-	if cfg.NewrelicEnabled {
-		nr := gorelic.NewAgent()
-		nr.Verbose = cfg.NewrelicVerbose
-		nr.NewrelicLicense = cfg.NewrelicKey
-		nr.NewrelicName = cfg.NewrelicName
-		nr.Run()
-	}
-}
-
 func readConfig(cfg *proxy.Config) {
 	configFileName := "config.json"
 	if len(os.Args) > 1 {
@@ -78,8 +66,6 @@ func main() {
 		runtime.GOMAXPROCS(cfg.Threads)
 		log.Printf("Running with %v threads", cfg.Threads)
 	}
-
-	startNewrelic()
 
 	backend = storage.NewRedisClient(&cfg.Redis, cfg.Coin)
 	pong, err := backend.Check()

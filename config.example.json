@@ -101,10 +101,5 @@
 	"shifts": {
 		"enabled": false,
 		"interval": "24h"
-	},
-
-	"newrelicEnabled": false,
-	"newrelicName": "MyEtherProxy",
-	"newrelicKey": "SECRET_KEY",
-	"newrelicVerbose": false
+	}
 }
