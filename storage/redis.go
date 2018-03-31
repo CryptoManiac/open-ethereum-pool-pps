@@ -532,7 +532,7 @@ func (r *RedisClient) IsMinerExists(login string) (bool, error) {
 	return r.client.Exists(r.formatKey("miners", login)).Result()
 }
 
-func (r *RedisClient) GetMinerStats(login string, maxPayments int64) (map[string]interface{}, error) {
+func (r *RedisClient) GetMinerStats(login string, maxPayments, maxShifts int64) (map[string]interface{}, error) {
 	stats := make(map[string]interface{})
 
 	tx := r.client.Multi()
@@ -541,6 +541,7 @@ func (r *RedisClient) GetMinerStats(login string, maxPayments int64) (map[string
 	cmds, err := tx.Exec(func() error {
 		tx.HGetAllMap(r.formatKey("miners", login))
 		tx.ZRevRangeWithScores(r.formatKey("payments", login), 0, maxPayments-1)
+		tx.ZRevRangeWithScores(r.formatKey("shifts", login), 0, maxShifts-1)
 		tx.ZCard(r.formatKey("payments", login))
 		tx.HGet(r.formatKey("shares", "roundCurrent"), login)
 		return nil
@@ -553,8 +554,10 @@ func (r *RedisClient) GetMinerStats(login string, maxPayments int64) (map[string
 		stats["stats"] = convertStringMap(result)
 		payments := convertPaymentsResults(cmds[1].(*redis.ZSliceCmd))
 		stats["payments"] = payments
-		stats["paymentsTotal"] = cmds[2].(*redis.IntCmd).Val()
-		roundShares, _ := cmds[3].(*redis.StringCmd).Int64()
+		shifts := convertShiftsResults(cmds[2].(*redis.ZSliceCmd))
+		stats["shifts"] = shifts
+		stats["paymentsTotal"] = cmds[3].(*redis.IntCmd).Val()
+		roundShares, _ := cmds[4].(*redis.StringCmd).Int64()
 		stats["roundShares"] = roundShares
 	}
 
@@ -907,6 +910,19 @@ func convertPaymentsResults(raw *redis.ZSliceCmd) []map[string]interface{} {
 			tx["amount"], _ = strconv.ParseInt(fields[2], 10, 64)
 		}
 		result = append(result, tx)
+	}
+	return result
+}
+
+func convertShiftsResults(raw *redis.ZSliceCmd) []map[string]interface{} {
+	var result []map[string]interface{}
+	for _, v := range raw.Val() {
+		rec := make(map[string]interface{})
+		rec["timestamp"] = int64(v.Score)
+		fields := strings.Split(v.Member.(string), ":")
+		rec["amount"], _ = strconv.ParseFloat(fields[0], 64)
+		rec["hashes"], _ = strconv.ParseInt(fields[1], 10, 64)
+		result = append(result, rec)
 	}
 	return result
 }

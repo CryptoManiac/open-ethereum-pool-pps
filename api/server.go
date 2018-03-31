@@ -22,6 +22,7 @@ type ApiConfig struct {
 	HashrateWindow       string `json:"hashrateWindow"`
 	HashrateLargeWindow  string `json:"hashrateLargeWindow"`
 	Payments             int64  `json:"payments"`
+	Shifts               int64  `json:"shifts"`
 	PurgeOnly            bool   `json:"purgeOnly"`
 	PurgeInterval        string `json:"purgeInterval"`
 }
@@ -257,7 +258,7 @@ func (s *ApiServer) AccountIndex(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		stats, err := s.backend.GetMinerStats(login, s.config.Payments)
+		stats, err := s.backend.GetMinerStats(login, s.config.Payments, s.config.Shifts)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			log.Printf("Failed to fetch stats from backend: %v", err)
