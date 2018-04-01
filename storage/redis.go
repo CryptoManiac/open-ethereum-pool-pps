@@ -225,8 +225,10 @@ func (r *RedisClient) WriteBlock(login, id string, params []string, diff, actual
 
 func (r *RedisClient) writeShare(tx *redis.Multi, ms, ts int64, login, id string, diff int64, actualDiff int64, potA, potCap, fee float64, netDiff int64, expire time.Duration) {
 	reward := util.GetShareReward(diff, actualDiff, netDiff, potA, potCap, fee)
-	tx.HIncrByFloat(r.formatKey("miners", login), "balance", reward)
-	tx.HIncrByFloat(r.formatKey("miners", login), "minedCurrent", reward)
+	if reward > 0 {
+		tx.HIncrByFloat(r.formatKey("miners", login), "balance", reward)
+		tx.HIncrByFloat(r.formatKey("miners", login), "minedCurrent", reward)
+	}
 	tx.HIncrBy(r.formatKey("miners", login), "hashesCurrent", diff)
 	tx.HIncrBy(r.formatKey("shares", "roundCurrent"), login, diff)
 	tx.ZAdd(r.formatKey("hashrate"), redis.Z{Score: float64(ts), Member: join(diff, login, id, ms)})
