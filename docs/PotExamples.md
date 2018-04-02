@@ -1,7 +1,7 @@
-# PoT share reward for various a and X values.
+# HVPPS share reward for various a and X values.
 
-## PoT description
-PoT (Pay on Target) is a configurable variant of PPS system which allows you to customize miner's variance. By playing a and X factors you can literally turn it into plain PPS, solo mining or something moderate between PPS and solo mining.
+## HVPPS description
+HVPPS (High-Variance Pay Per Share) aka PoT (Pay on Target) is a configurable superset of PPS system which allows you to customize miner's variance. By playing with ```a``` and ```X``` variables you can literally turn it into plain PPS, solo mining or something moderate between PPS and solo mining.
 
 ## Examples
 
