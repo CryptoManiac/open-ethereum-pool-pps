@@ -1,7 +1,7 @@
 # HVPPS share reward for various a and X values.
 
 ## HVPPS description
-HVPPS (High-Variance Pay Per Share) aka PoT (Pay on Target) is a configurable superset of PPS system which allows you to customize miner's variance. By playing with ```a``` and ```X``` variables you can literally turn it into plain PPS, solo mining or something moderate between PPS and solo mining.
+HVPPS (High-Variance Pay Per Share) aka PoT (Pay on Target) is a configurable superset of PPS system which allows you to customize miner's variance. By playing with ```a``` and ```X``` variables you can literally turn it into either plain PPS or something moderate between PPS and solo mining.
 
 ## Examples
 
@@ -43,21 +43,7 @@ NetDiff/2 share reward: 0.05135628356744854 ETH
 Maximum share reward: 0.33371411516488336 ETH
 Block solving share reward: 0.09583421378229816 ETH
 ```
-### Solo-like configuration
-a=20.000000 X=1.000000
-```
-5G share reward: 0.00000000000000000 ETH
-20 G share reward: 0.00000000000000000 ETH
-80 G share reward: 0.00000000000000000 ETH
-320 G share reward: 0.00000000000000000 ETH
-1280 G share reward: 0.00000000000000000 ETH
-5120 G share reward: 0.00000000000000000 ETH
-NetDiff/4 share reward: 0.00000000000255318 ETH
-NetDiff/3 share reward: 0.00000000080511144 ETH
-NetDiff/2 share reward: 0.00000267720222473 ETH
-Maximum share reward: 2.80724999999999936 ETH
-Block solving share reward: 2.80724999999999936 ETH
-```
+
 ## References
 
 https://bitcointalk.org/index.php?topic=131376.0 - Original thread on bitcointalk.org
