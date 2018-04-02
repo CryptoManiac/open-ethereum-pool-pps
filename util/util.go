@@ -78,8 +78,8 @@ func GetShareReward(shareDiff, actualDiff, netDiff int64, potA, potCap, fee floa
 	// Standard PPS rate at given difficulty
 	ppsRate := GetPPSRate(shareDiff, netDiff, fee)
 	
-	// Fallback to normal PPS if PoT context is not configured
-	if potA == 0 || potCap == 0 {
+	// Fallback to normal PPS if PoT context is not configured properly
+	if potA >= 1 || potA == 0 || potCap == 0 {
 		return ppsRate
 	}
 
