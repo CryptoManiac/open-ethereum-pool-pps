@@ -48,4 +48,4 @@ Block solving share reward: 0.09583421378229816 ETH
 
 https://bitcointalk.org/index.php?topic=131376.0 - Original thread on bitcointalk.org
 
-https://play.golang.org/p/bEoEazMwDqn - Script used to calculate rewards in this note
+https://play.golang.org/p/f4p_2ah71JF - Script used to calculate rewards in this note
