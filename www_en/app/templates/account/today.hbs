@@ -1,0 +1,25 @@
+<div class="container">
+  {{#if model.shiftsToday}}
+  <h4>Today's log</h4>
+  <table class="table table-condensed table-striped">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Hashes submitted</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each model.shiftsToday as |shift|}}
+        <tr>
+          <td>{{format-date-locale shift.timestamp}}</td>
+          <td>{{with-metric-prefix shift.hashes}}</td>
+          <td>{{format-balance shift.amount}}</td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{else}}
+  <h3>No log records today</h3>
+  {{/if}}
+</div>

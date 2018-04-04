@@ -1,0 +1,25 @@
+<div class="container">
+  {{#if model.shiftsToday}}
+  <h4>Результаты за сегодня</h4>
+  <table class="table table-condensed table-striped">
+    <thead>
+      <tr>
+        <th>Время</th>
+        <th>Работа</th>
+        <th>Сумма</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each model.shiftsToday as |shift|}}
+        <tr>
+          <td>{{format-date-locale shift.timestamp}}</td>
+          <td>{{with-metric-prefix shift.hashes}}</td>
+          <td>{{format-balance shift.amount}}</td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{else}}
+  <h3>Записей за сегодня нет</h3>
+  {{/if}}
+</div>
