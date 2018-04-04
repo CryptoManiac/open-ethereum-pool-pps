@@ -58,7 +58,8 @@
 		"hashrateWindow": "30m",
 		"hashrateLargeWindow": "3h",
 		"payments": 30,
-		"shifts": 30
+		"longShifts": 30,
+		"shortShifts": 24
 	},
 
 	"upstreamCheckInterval": "5s",
@@ -99,6 +100,10 @@
 
 	"shifts": {
 		"enabled": false,
-		"interval": "24h"
+		"longInterval": "1d",
+		"shortInterval" : "1h",
+		"keepLong" : "30d",
+		"keepShort": "24h",
+		"flushInterval": "1d"
 	}
 }

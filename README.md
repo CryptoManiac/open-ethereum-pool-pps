@@ -205,8 +205,9 @@ otherwise you will get errors on start because of JSON comments.**
     "luckWindow": [64, 128, 256],
     // Max number of payments to display in frontend
     "payments": 50,
-    // Max numbers of blocks to display in frontend
-    "blocks": 50,
+    // Max numbers of shifts to display in frontend
+    "longShifts": 30,
+    "shortShifts": 24,
 
     /* If you are running API node on a different server where this module
       is reading data from redis writeable slave, you must run an api instance with this option enabled in order to purge hashrate stats from main redis node.
@@ -272,8 +273,14 @@ otherwise you will get errors on start because of JSON comments.**
   // Maintain daily shifts of per-user statistics
   "shifts": {
     "enabled": false,
-    // Run in this interval
-    "interval": "24h"
+
+    // Create long shifts in these intervals
+    "longInterval": "24h",
+    "shortInterval" : "1h",
+
+    // Keep shifts data during these intervals
+    "keepLong" : "30d",
+    "keepShort": "24h"
   }
 }
 ```

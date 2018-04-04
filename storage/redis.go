@@ -227,8 +227,10 @@ func (r *RedisClient) writeShare(tx *redis.Multi, ms, ts int64, login, id string
 	reward := util.GetShareReward(diff, actualDiff, netDiff, potA, potCap, fee)
 	if reward > 0 {
 		tx.HIncrByFloat(r.formatKey("miners", login), "balance", reward)
+		tx.HIncrByFloat(r.formatKey("miners", login), "minedShort", reward)
 		tx.HIncrByFloat(r.formatKey("miners", login), "minedCurrent", reward)
 	}
+	tx.HIncrBy(r.formatKey("miners", login), "hashesShort", diff)
 	tx.HIncrBy(r.formatKey("miners", login), "hashesCurrent", diff)
 	tx.HIncrBy(r.formatKey("shares", "roundCurrent"), login, diff)
 	tx.ZAdd(r.formatKey("hashrate"), redis.Z{Score: float64(ts), Member: join(diff, login, id, ms)})
@@ -405,7 +407,7 @@ func (r *RedisClient) RollbackBalance(login string, amount int64) error {
 	return err
 }
 
-func (r *RedisClient) WriteShift(login string) error {
+func (r *RedisClient) WriteLongShift(login string) error {
 	tx := r.client.Multi()
 	defer tx.Close()
 	
@@ -429,6 +431,36 @@ func (r *RedisClient) WriteShift(login string) error {
 		tx.HSet(r.formatKey("miners", login), "minedCurrent", "0")
 		tx.HSet(r.formatKey("miners", login), "hashesCurrent", "0")
 		tx.ZAdd(r.formatKey("shifts", login), redis.Z{Score: float64(ts), Member: join(mined, hashes)})
+		return nil
+	})
+	
+	return err
+}
+
+func (r *RedisClient) WriteShortShift(login string) error {
+	tx := r.client.Multi()
+	defer tx.Close()
+	
+	
+	ts := util.MakeTimestamp() / 1000
+
+	cmds, _ := tx.Exec(func() error {
+		tx.HGet(r.formatKey("miners", login), "minedShort")
+		tx.HGet(r.formatKey("miners", login), "hashesShort")
+		return nil
+	})
+	
+	hashes, _ := cmds[1].(*redis.StringCmd).Int64()
+	mined, _ := cmds[0].(*redis.StringCmd).Float64()
+	
+	if hashes == 0 {
+		return nil
+	}
+	
+	_, err := tx.Exec(func() error {
+		tx.HSet(r.formatKey("miners", login), "minedShort", "0")
+		tx.HSet(r.formatKey("miners", login), "hashesShort", "0")
+		tx.ZAdd(r.formatKey("shifts_short", login), redis.Z{Score: float64(ts), Member: join(mined, hashes)})
 		return nil
 	})
 	
@@ -459,7 +491,7 @@ func (r *RedisClient) IsMinerExists(login string) (bool, error) {
 	return r.client.Exists(r.formatKey("miners", login)).Result()
 }
 
-func (r *RedisClient) GetMinerStats(login string, maxPayments, maxShifts int64) (map[string]interface{}, error) {
+func (r *RedisClient) GetMinerStats(login string, maxPayments, maxShiftsLong, maxShiftsShort int64) (map[string]interface{}, error) {
 	stats := make(map[string]interface{})
 
 	tx := r.client.Multi()
@@ -468,7 +500,8 @@ func (r *RedisClient) GetMinerStats(login string, maxPayments, maxShifts int64) 
 	cmds, err := tx.Exec(func() error {
 		tx.HGetAllMap(r.formatKey("miners", login))
 		tx.ZRevRangeWithScores(r.formatKey("payments", login), 0, maxPayments-1)
-		tx.ZRevRangeWithScores(r.formatKey("shifts", login), 0, maxShifts-1)
+		tx.ZRevRangeWithScores(r.formatKey("shifts", login), 0, maxShiftsLong-1)
+		tx.ZRevRangeWithScores(r.formatKey("shifts_short", login), 0, maxShiftsShort-1)
 		tx.ZCard(r.formatKey("payments", login))
 		tx.HGet(r.formatKey("shares", "roundCurrent"), login)
 		return nil
@@ -481,10 +514,12 @@ func (r *RedisClient) GetMinerStats(login string, maxPayments, maxShifts int64) 
 		stats["stats"] = convertStringMap(result)
 		payments := convertPaymentsResults(cmds[1].(*redis.ZSliceCmd))
 		stats["payments"] = payments
-		shifts := convertShiftsResults(cmds[2].(*redis.ZSliceCmd))
-		stats["shifts"] = shifts
-		stats["paymentsTotal"] = cmds[3].(*redis.IntCmd).Val()
-		roundShares, _ := cmds[4].(*redis.StringCmd).Int64()
+		shiftsLong := convertShiftsResults(cmds[2].(*redis.ZSliceCmd))
+		stats["shifts"] = shiftsLong
+		shiftsShort := convertShiftsResults(cmds[3].(*redis.ZSliceCmd))
+		stats["shifts"] = shiftsShort
+		stats["paymentsTotal"] = cmds[4].(*redis.IntCmd).Val()
+		roundShares, _ := cmds[5].(*redis.StringCmd).Int64()
 		stats["roundShares"] = roundShares
 	}
 
@@ -537,6 +572,32 @@ func (r *RedisClient) FlushStaleStats(window, largeWindow time.Duration) (int64,
 		}
 		if c == 0 {
 			break
+		}
+	}
+	return total, nil
+}
+
+func (r *RedisClient) FlushShifts(windowLong, windowShort time.Duration, users []string) (int64, error) {
+	now := util.MakeTimestamp() / 1000
+	maxLong, maxShort := fmt.Sprint("(", now-int64(windowLong/time.Second)), fmt.Sprint("(", now-int64(windowShort/time.Second))
+	total := int64(0)
+	for _, login := range users {
+		// Long shifts
+		{
+			total_current, err := r.client.ZRemRangeByScore(r.formatKey("shifts", login), "-inf", maxLong).Result()
+			total += total_current
+			if err != nil {
+				return total, err
+			}
+		}
+		
+		// Short shifts
+		{
+			total_current, err := r.client.ZRemRangeByScore(r.formatKey("shifts_short", login), "-inf", maxShort).Result()
+			total += total_current
+			if err != nil {
+				return total, err
+			}
 		}
 	}
 	return total, nil
