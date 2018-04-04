@@ -58,8 +58,7 @@
 		"hashrateWindow": "30m",
 		"hashrateLargeWindow": "3h",
 		"payments": 30,
-		"shifts": 30,
-		"blocks": 50
+		"shifts": 30
 	},
 
 	"upstreamCheckInterval": "5s",
