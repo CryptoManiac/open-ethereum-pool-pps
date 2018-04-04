@@ -98,3 +98,18 @@ func String2Big(num string) *big.Int {
 	n.SetString(num, 0)
 	return n
 }
+
+func Schedule(what func(), delay time.Duration) chan bool {
+	stop := make(chan bool)
+	go func() {
+		for {
+			what()
+			select {
+			case <-time.After(delay):
+			case <-stop:
+				return
+			}
+		}
+	}()
+	return stop
+}

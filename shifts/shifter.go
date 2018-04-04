@@ -2,7 +2,6 @@ package shifts
 
 import (
 	"log"
-	"time"
 
 	"github.com/CryptoManiac/open-ethereum-pool/storage"
 	"github.com/CryptoManiac/open-ethereum-pool/util"
@@ -47,13 +46,17 @@ func (u *ShiftsProcessor) Start() {
 		if err != nil {
 			log.Println("Error while retrieving miners from backend:", err)
 		} else {
-			u.backend.FlushShifts(longWindow, shortWindow, users)
+			entries, err2 := u.backend.FlushShifts(longWindow, shortWindow, users)
+			if err2 != nil {
+				log.Println("Error while flushing entries:", err2)
+			}
+			log.Printf("Flushed %v entries", entries)
 		}
 	}
 	
-	Schedule(u.processLong, longIntv)
-	Schedule(u.processShort, shortIntv)
-	Schedule(processFlush, flushIntv)
+	util.Schedule(u.processLong, longIntv)
+	util.Schedule(u.processShort, shortIntv)
+	util.Schedule(processFlush, flushIntv)
 }
 
 func (u *ShiftsProcessor) processLong() {
@@ -86,19 +89,4 @@ func (u *ShiftsProcessor) processShort() {
 	}
 	
 	log.Printf("%v short shifts created", shiftsDone)
-}
-
-func Schedule(what func(), delay time.Duration) chan bool {
-	stop := make(chan bool)
-	go func() {
-		for {
-			what()
-			select {
-			case <-time.After(delay):
-			case <-stop:
-				return
-			}
-		}
-	}()
-	return stop
 }
