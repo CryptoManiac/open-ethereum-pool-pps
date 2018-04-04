@@ -100,10 +100,10 @@
 
 	"shifts": {
 		"enabled": false,
-		"longInterval": "1d",
+		"longInterval": "24h",
 		"shortInterval" : "1h",
-		"keepLong" : "30d",
+		"keepLong" : "720h",
 		"keepShort": "24h",
-		"flushInterval": "1d"
+		"flushInterval": "24h"
 	}
 }
