@@ -517,7 +517,7 @@ func (r *RedisClient) GetMinerStats(login string, maxPayments, maxShiftsLong, ma
 		shiftsLong := convertShiftsResults(cmds[2].(*redis.ZSliceCmd))
 		stats["shifts"] = shiftsLong
 		shiftsShort := convertShiftsResults(cmds[3].(*redis.ZSliceCmd))
-		stats["shifts"] = shiftsShort
+		stats["shiftsToday"] = shiftsShort
 		stats["paymentsTotal"] = cmds[4].(*redis.IntCmd).Val()
 		roundShares, _ := cmds[5].(*redis.StringCmd).Int64()
 		stats["roundShares"] = roundShares
