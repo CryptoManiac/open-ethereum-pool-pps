@@ -29,6 +29,7 @@ export default Ember.Route.extend({
 
             result += '</dl>';
             result += '</span>';
+            result += '<p>Оценка точна только для PPS режима. В HVPPS режиме будут отклонения в обе стороны из-за персональной удачи майнера, особенно на коротких дистанциях.</p>';
             result += '</div></div>';
 
             document.getElementById('calculation-result').innerHTML = result;
