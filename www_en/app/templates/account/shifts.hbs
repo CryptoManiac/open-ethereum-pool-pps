@@ -1,11 +1,11 @@
 <div class="container">
   {{#if model.shifts}}
-  <h4>Work &amp; accounting log</h4>
+  <h4>Daily work &amp; accounting log</h4>
   <table class="table table-condensed table-striped">
     <thead>
       <tr>
         <th>Date</th>
-        <th>Hashes submitted</th>
+        <th>Hashes submitted *</th>
         <th>Amount</th>
       </tr>
     </thead>
@@ -19,6 +19,7 @@
       {{/each}}
     </tbody>
   </table>
+  <p>* This is a sum of nominal share difficulty, <b>not</b> a real one.</p>
   {{else}}
   <h3>No log records yet</h3>
   {{/if}}

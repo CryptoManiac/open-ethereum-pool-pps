@@ -28,7 +28,7 @@
         <div style="display: block;"><i class="fa fa-cubes"></i> Блоков найдено: <span>{{format-number model.stats.blocksFound fallback='0'}}</span></div>
         <div style="display: block;"><i class="fa fa-paper-plane-o"></i> Проведено выплат: <span>{{format-number model.paymentsTotal}}</span></div>
         {{#if model.stats.hashesCurrent}}
-        <div style="display: block;"><i class="fa fa-gears"></i> Хэшей сегодня: <span>{{with-metric-prefix model.stats.hashesCurrent}}</span></div>
+        <div style="display: block;"><i class="fa fa-gears"></i> {{with-metric-prefix model.stats.hashesCurrent}} хэшей сегодня{{#if model.stats.hashesShort}} / {{with-metric-prefix model.stats.hashesShort}} за этот час{{/if}}</div>
         {{/if}}
         <div style="display: block;">
           <i class="fa fa-clock-o"></i>

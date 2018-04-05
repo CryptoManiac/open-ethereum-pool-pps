@@ -1,11 +1,11 @@
 <div class="container">
   {{#if model.shiftsToday}}
-  <h4>Результаты за сегодня</h4>
+  <h4>Почасовой журнал начислений и работы</h4>
   <table class="table table-condensed table-striped">
     <thead>
       <tr>
         <th>Время</th>
-        <th>Работа</th>
+        <th>Работа *</th>
         <th>Сумма</th>
       </tr>
     </thead>
@@ -19,6 +19,7 @@
       {{/each}}
     </tbody>
   </table>
+  <p>* Это сумма номинальной сложности решений, а <b>не</b> реальной.</p>
   {{else}}
   <h3>Записей за сегодня нет</h3>
   {{/if}}

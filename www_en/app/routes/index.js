@@ -29,6 +29,7 @@ export default Ember.Route.extend({
 
             result += '</dl>';
             result += '</span>';
+            result += '<p>Estimation is accurate only for zero-variance PPS mode. HVPPS incomings are subject to share based variance.</p>';
             result += '</div></div>';
 
             document.getElementById('calculation-result').innerHTML = result;
