@@ -132,6 +132,7 @@ otherwise you will get errors on start because of JSON comments.**
       "enabled": true,
       // Bind stratum mining socket to this IP:PORT
       "listen": "0.0.0.0:8008",
+      "protocol": "StratumProxy",
       "timeout": "120s",
       "maxConn": 8192
     },
