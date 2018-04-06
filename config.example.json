@@ -23,7 +23,7 @@
 		"stratum": {
 			"enabled": true,
 			"listen": "0.0.0.0:8008",
-			"protocol": "StratumProxy",
+			"protocol": "Stratum-Proxy",
 			"timeout": "120s",
 			"maxConn": 8192
 		},
