@@ -43,12 +43,13 @@ type Proxy struct {
 	MaxFails    int64 `json:"maxFails"`
 	HealthCheck bool  `json:"healthCheck"`
 
-	Stratum Stratum `json:"stratum"`
+	Stratum StratumEndpoint `json:"stratum"`
 }
 
-type Stratum struct {
+type StratumEndpoint struct {
 	Enabled bool   `json:"enabled"`
 	Listen  string `json:"listen"`
+	Protocol string `json:"protocol"`
 	Timeout string `json:"timeout"`
 	MaxConn int    `json:"maxConn"`
 }

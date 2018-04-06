@@ -13,35 +13,46 @@ import (
 var hasher = ethash.New()
 
 func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, params []string) (bool, bool) {
-	nonceHex := params[0]
-	hashNoNonce := params[1]
-	mixDigest := params[2]
-	nonce, _ := strconv.ParseUint(strings.Replace(nonceHex, "0x", "", -1), 16, 64)
-	shareDiff := s.config.Proxy.Difficulty
-	shareFee := s.config.Proxy.MiningFee
-	potA := s.config.Proxy.PoT_A
-	potCap := s.config.Proxy.PoT_Cap
 
-	h, ok := t.headers[hashNoNonce]
+	h, ok := t.headers[params[1]]
 	if !ok {
 		log.Printf("Stale share from %v@%v", login, ip)
 		return false, false
 	}
 
+	hashNoNonce := common.HexToHash(params[1])
+	mixDigest := common.HexToHash(params[2])
+	nonce, _ := strconv.ParseUint(strings.Replace(params[0], "0x", "", -1), 16, 64)
+	shareDiff := s.config.Proxy.Difficulty
+	shareFee := s.config.Proxy.MiningFee
+	potA := s.config.Proxy.PoT_A
+	potCap := s.config.Proxy.PoT_Cap
+
+	data := []string {
+		params[0],
+		params[1],
+		params[2],
+	}
+
+	if hashNoNonce == mixDigest {
+		mixDigest = hasher.ComputeMixDigest(t.Height, hashNoNonce, nonce)
+		data[2] = mixDigest.Hex()
+	}
+
 	share := Block{
 		number:      h.height,
-		hashNoNonce: common.HexToHash(hashNoNonce),
+		hashNoNonce: hashNoNonce,
 		difficulty:  big.NewInt(shareDiff),
 		nonce:       nonce,
-		mixDigest:   common.HexToHash(mixDigest),
+		mixDigest:   mixDigest,
 	}
 
 	block := Block{
 		number:      h.height,
-		hashNoNonce: common.HexToHash(hashNoNonce),
+		hashNoNonce: hashNoNonce,
 		difficulty:  h.diff,
 		nonce:       nonce,
-		mixDigest:   common.HexToHash(mixDigest),
+		mixDigest:   mixDigest,
 	}
 
 	isShare, actualDiff := hasher.Verify(share)
@@ -53,7 +64,7 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, param
 	isBlock, _ := hasher.Verify(block)
 
 	if isBlock {
-		ok, err := s.rpc().SubmitBlock(params)
+		ok, err := s.rpc().SubmitBlock(data)
 		if err != nil {
 			log.Printf("Block submission failure at height %v for %v: %v", h.height, t.Header, err)
 		} else if !ok {
@@ -61,7 +72,7 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, param
 			return false, false
 		} else {
 			s.fetchBlockTemplate()
-			exist, err := s.backend.WriteBlock(login, id, params, shareDiff, actualDiff, potA, potCap, shareFee, h.diff.Int64(), h.height, s.hashrateExpiration)
+			exist, err := s.backend.WriteBlock(login, id, data, shareDiff, actualDiff, potA, potCap, shareFee, h.diff.Int64(), h.height, s.hashrateExpiration)
 			if exist {
 				return true, false
 			}
@@ -73,7 +84,7 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, param
 			log.Printf("Block found by miner %v@%v at height %d", login, ip, h.height)
 		}
 	} else {
-		exist, err := s.backend.WriteShare(login, id, params, shareDiff, actualDiff, potA, potCap, shareFee, h.diff.Int64(), h.height, s.hashrateExpiration)
+		exist, err := s.backend.WriteShare(login, id, data, shareDiff, actualDiff, potA, potCap, shareFee, h.diff.Int64(), h.height, s.hashrateExpiration)
 		if exist {
 			return true, false
 		}

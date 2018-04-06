@@ -34,22 +34,34 @@ type ProxyServer struct {
 	sessionsMu sync.RWMutex
 	sessions   map[*Session]struct{}
 	timeout    time.Duration
+	
+}
+
+// EthereumStratum job
+type jobDetails struct {
+    JobID string
+    SeedHash string
+    HeaderHash string
 }
 
 type Session struct {
 	ip  string
 	enc *json.Encoder
 
-	// Stratum
 	sync.Mutex
 	conn  *net.TCPConn
 	login string
+
+	// EthereumStratum internals
+	Extranonce string
+	JobDetails jobDetails
 }
 
 func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
 	if len(cfg.Name) == 0 {
 		log.Fatal("You must set instance name")
 	}
+
 	policy := policy.Start(&cfg.Proxy.Policy, backend)
 
 	proxy := &ProxyServer{config: cfg, backend: backend, policy: policy}
@@ -64,7 +76,15 @@ func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
 
 	if cfg.Proxy.Stratum.Enabled {
 		proxy.sessions = make(map[*Session]struct{})
-		go proxy.ListenTCP()
+
+		switch cfg.Proxy.Stratum.Protocol {
+		case "Stratum-Proxy":
+			go proxy.ListenSP()
+		case "EthereumStratum":
+			go proxy.ListenES()
+		default:
+			log.Fatal("Please choose either Stratum-Proxy or EthereumStratum protocol for your stratum endpoint.")
+		}
 	}
 
 	proxy.fetchBlockTemplate()
