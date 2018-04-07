@@ -12,14 +12,7 @@ import (
 
 var hasher = ethash.New()
 
-func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, params []string) (bool, bool) {
-
-	h, ok := t.headers[params[1]]
-	if !ok {
-		log.Printf("Stale share from %v@%v", login, ip)
-		return false, false
-	}
-
+func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, params []string) (bool, bool, []string) {
 	hashNoNonce := common.HexToHash(params[1])
 	mixDigest := common.HexToHash(params[2])
 	nonce, _ := strconv.ParseUint(strings.Replace(params[0], "0x", "", -1), 16, 64)
@@ -37,6 +30,12 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, param
 	if hashNoNonce == mixDigest {
 		mixDigest = hasher.ComputeMixDigest(t.Height, hashNoNonce, nonce)
 		data[2] = mixDigest.Hex()
+	}
+
+	h, ok := t.headers[params[1]]
+	if !ok {
+		log.Printf("Stale share from %v@%v", login, ip)
+		return false, false, data
 	}
 
 	share := Block{
@@ -58,7 +57,7 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, param
 	isShare, actualDiff := hasher.Verify(share)
 
 	if !isShare {
-		return false, false
+		return false, false, data
 	}
 
 	isBlock, _ := hasher.Verify(block)
@@ -69,12 +68,12 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, param
 			log.Printf("Block submission failure at height %v for %v: %v", h.height, t.Header, err)
 		} else if !ok {
 			log.Printf("Block rejected at height %v for %v", h.height, t.Header)
-			return false, false
+			return false, false, data
 		} else {
 			s.fetchBlockTemplate()
 			exist, err := s.backend.WriteBlock(login, id, data, shareDiff, actualDiff, potA, potCap, shareFee, h.diff.Int64(), h.height, s.hashrateExpiration)
 			if exist {
-				return true, false
+				return true, false, data
 			}
 			if err != nil {
 				log.Println("Failed to insert block candidate into backend:", err)
@@ -86,11 +85,11 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, param
 	} else {
 		exist, err := s.backend.WriteShare(login, id, data, shareDiff, actualDiff, potA, potCap, shareFee, h.diff.Int64(), h.height, s.hashrateExpiration)
 		if exist {
-			return true, false
+			return true, false, data
 		}
 		if err != nil {
 			log.Println("Failed to insert share data into backend:", err)
 		}
 	}
-	return false, true
+	return false, true, data
 }

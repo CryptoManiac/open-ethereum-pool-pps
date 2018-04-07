@@ -37,13 +37,6 @@ type ProxyServer struct {
 	
 }
 
-// EthereumStratum job
-type jobDetails struct {
-    JobID string
-    SeedHash string
-    HeaderHash string
-}
-
 type Session struct {
 	ip  string
 	enc *json.Encoder
@@ -54,7 +47,7 @@ type Session struct {
 
 	// EthereumStratum internals
 	Extranonce string
-	JobDetails jobDetails
+	Jobs *JobQueue
 }
 
 func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {

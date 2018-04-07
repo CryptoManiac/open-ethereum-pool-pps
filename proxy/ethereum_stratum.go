@@ -14,6 +14,40 @@ import (
 	"strings"
 )
 
+// EthereumStratum job
+type JobData struct {
+	JobID string
+	SeedHash string
+	HeaderHash string
+}
+
+type JobQueue struct {
+	items []JobData
+}
+
+func (jq *JobQueue) JobEnqueue(job JobData) bool {
+	if len(jq.items) < 3 {
+		jq.items = append(jq.items, job)
+		return true
+	}
+
+	copy(jq.items[0:], jq.items[1:])
+	jq.items = jq.items[:len(jq.items)-1]
+	jq.items = append(jq.items, job)
+
+	return true
+}
+
+func (jq *JobQueue) FindJob(JobID string, job *JobData) bool {
+	for _, v := range jq.items {
+		if v.JobID == JobID {
+			*job = v
+			return true
+		}
+	}
+	return false
+}
+
 func (s *ProxyServer) ListenES(){
 	timeout := util.MustParseDuration(s.config.Proxy.Stratum.Timeout)
 	s.timeout = timeout
@@ -46,7 +80,7 @@ func (s *ProxyServer) ListenES(){
 			continue
 		}
 		n += 1
-		cs := &Session{conn: conn, ip: ip, Extranonce: randstr.Hex(2)}
+		cs := &Session{ conn: conn, ip: ip, Extranonce: randstr.Hex(2), Jobs: &JobQueue{} }
 
 		accept <- n
 		go func(cs *Session) {
@@ -153,18 +187,24 @@ func(cs *Session) sendJob(s *ProxyServer, id *json.RawMessage) error {
 		}
 	}
 
-	cs.JobDetails = jobDetails{
+	job := JobData{
 		JobID: randstr.Hex(4),
 		SeedHash: reply[1],
 		HeaderHash: reply[0],
 	}
 
+	
+
+	if !cs.Jobs.JobEnqueue(job) {
+		return cs.sendESError(id, "unable to create job")
+	}
+
 	resp := EthStratumReq{
 		Method:"mining.notify",
 		Params: []interface{}{
-			cs.JobDetails.JobID,
-			cs.JobDetails.SeedHash,
-			cs.JobDetails.HeaderHash,
+			job.JobID,
+			job.SeedHash,
+			job.HeaderHash,
 			true,
 		},
 	}
@@ -233,15 +273,16 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 			id = splitData[1]
 		}
 
-//		TODO: resolve jobid mismatching issue
-//		if cs.JobDetails.JobID != params[1] {
-//			return cs.sendESError(req.Id, "wrong job id")
-//		}
+		var job JobData
+		if !cs.Jobs.FindJob(params[1], &job) {
+			log.Printf("Unknown job %v from %v@%v", params[1], cs.login, cs.ip)
+			return cs.sendESError(req.Id, "unknown job id")
+		}
 
 		params = []string{
 			cs.Extranonce + params[2],
-			cs.JobDetails.HeaderHash,
-			cs.JobDetails.HeaderHash,
+			job.HeaderHash,
+			job.HeaderHash,
 		}
 		
 		for k, v := range params {
@@ -266,7 +307,7 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 			return err
 		}
 
-		return cs.sendJob(s, req.Id)
+		return nil
 
 	default:
 		errReply := s.handleUnknownRPC(cs, req.Method)
@@ -298,25 +339,31 @@ func (s *ProxyServer) broadcastNewESJobs() {
 		bcast <- n
 
 		go func(cs *Session) {
-			cs.JobDetails = jobDetails{
+			job := JobData{
 				JobID: randstr.Hex(4),
 				SeedHash: t.Seed,
 				HeaderHash: t.Header,
 			}
 
-			if (cs.JobDetails.SeedHash[0:2] == "0x") {
-				cs.JobDetails.SeedHash = cs.JobDetails.SeedHash[2:]
+			if (job.SeedHash[0:2] == "0x") {
+				job.SeedHash = job.SeedHash[2:]
 			}
-			if (cs.JobDetails.HeaderHash[0:2] == "0x") {
-				cs.JobDetails.HeaderHash = cs.JobDetails.HeaderHash[2:]
+			if (job.HeaderHash[0:2] == "0x") {
+				job.HeaderHash = job.HeaderHash[2:]
+			}
+
+			if !cs.Jobs.JobEnqueue(job) {
+				log.Printf("Unable to queue job for: %v@%v", cs.login, cs.ip)
+				s.removeSession(cs)
+				return
 			}
 
 			resp := EthStratumReq{
 				Method:"mining.notify",
 				Params: []interface{}{
-					cs.JobDetails.JobID,
-					cs.JobDetails.SeedHash,
-					cs.JobDetails.HeaderHash,
+					job.JobID,
+					job.SeedHash,
+					job.HeaderHash,
 					true,
 				},
 			}
