@@ -48,6 +48,29 @@ func (jq *JobQueue) FindJob(JobID string, job *JobData) bool {
 	return false
 }
 
+// Get unique extranonce
+func (s *ProxyServer) GetExtraNonce() string {
+	var extraNonce string
+
+	for {
+		extraNonce = randstr.Hex(2)
+		found := true
+
+		for m, _ := range s.sessions {
+			if m.Extranonce == extraNonce {
+				found = false
+				break
+			}
+		}
+
+		if found {
+			break
+		}
+	}
+
+	return extraNonce
+}
+
 func (s *ProxyServer) ListenES(){
 	timeout := util.MustParseDuration(s.config.Proxy.Stratum.Timeout)
 	s.timeout = timeout
@@ -80,7 +103,7 @@ func (s *ProxyServer) ListenES(){
 			continue
 		}
 		n += 1
-		cs := &Session{ conn: conn, ip: ip, Extranonce: randstr.Hex(2), Jobs: &JobQueue{} }
+		cs := &Session{ conn: conn, ip: ip, Extranonce: s.GetExtraNonce(), Jobs: &JobQueue{} }
 
 		accept <- n
 		go func(cs *Session) {
@@ -193,8 +216,6 @@ func(cs *Session) sendJob(s *ProxyServer, id *json.RawMessage) error {
 		HeaderHash: reply[0],
 	}
 
-	
-
 	if !cs.Jobs.JobEnqueue(job) {
 		return cs.sendESError(id, "unable to create job")
 	}
@@ -266,6 +287,8 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 		if err := json.Unmarshal(*req.Params, &params); err != nil{
 			return err
 		}
+		
+		
 
 		splitData := strings.Split(params[0], ".")
 		id := "0"
