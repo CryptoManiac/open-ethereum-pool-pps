@@ -27,9 +27,6 @@ type Config struct {
 type Proxy struct {
 	Enabled              bool   `json:"enabled"`
 	Listen               string `json:"listen"`
-	LimitHeadersSize     int    `json:"limitHeadersSize"`
-	LimitBodySize        int64  `json:"limitBodySize"`
-	BehindReverseProxy   bool   `json:"behindReverseProxy"`
 	BlockRefreshInterval string `json:"blockRefreshInterval"`
 	Difficulty           int64  `json:"difficulty"`
 	MiningFee            float64 `json:"miningFee"`
