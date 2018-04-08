@@ -10,8 +10,8 @@ PoT is essentially the same as PPS but with artificially created variance.
 
 **This pool is being further developed to provide an easy to use pool for Ethereum miners. This software is functional however an optimised release of the pool is expected soon. Testing and bug submissions are welcome!**
 
-* Support for HTTP and Stratum mining
-* Detailed block stats with luck percentage and full reward
+* Support EthProxy and Ethereum Stratum protocols
+* Support for parity's job notification
 * Failover geth instances: geth high availability built in
 * Modern beautiful Ember.js frontend
 * Separate stats for workers: can highlight timed-out workers so miners can perform maintenance of rigs
@@ -306,9 +306,9 @@ I recommend this deployment strategy:
 * You must restart module if you see errors with the word *suspended*.
 * Don't run either payouts or shifting  module as part of mining node. Create separate configs for them, launch independently and make sure you have a single instance of each module running.
 
-### Alternative Ethereum Implementations
+### Ethereum Implementations
 
-This pool is tested to work with [Ethcore's Parity](https://github.com/ethcore/parity).
+This pool is tested to work with [Parity](https://github.com/paritytech/parity). It is recommended to use this Ethereum client due to availability of --notify-work feature which allows you to avoid block polling.
 
 ### Credits
 
