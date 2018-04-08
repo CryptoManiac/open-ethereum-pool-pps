@@ -28,7 +28,8 @@ type PayoutsConfig struct {
 	GasPrice     string `json:"gasPrice"`
 	AutoGas      bool   `json:"autoGas"`
 	// In Shannon
-	Threshold int64 `json:"threshold"`
+	NormalThreshold int64 `json:"thresholdNormal"`
+	InactiveThreshold int64 `json:"thresholdInactive"`
 	BgSave    bool  `json:"bgsave"`
 }
 
@@ -118,12 +119,14 @@ func (u *PayoutsProcessor) process() {
 
 	for _, login := range payees {
 		amount, _ := u.backend.GetBalance(login)
+		lastActivity, _ := u.backend.GetLastActivity(login)
 		amountInShannon := big.NewInt(amount)
+		inactive := lastActivity.Before(time.Now().AddDate(0, 0, -7))
 
 		// Shannon^2 = Wei
 		amountInWei := new(big.Int).Mul(amountInShannon, util.Shannon)
 
-		if !u.reachedThreshold(amountInShannon) {
+		if !u.reachedThreshold(amountInShannon, inactive) {
 			continue
 		}
 		mustPay++
@@ -243,8 +246,12 @@ func (self PayoutsProcessor) checkPeers() bool {
 	return true
 }
 
-func (self PayoutsProcessor) reachedThreshold(amount *big.Int) bool {
-	return big.NewInt(self.config.Threshold).Cmp(amount) < 0
+func (self PayoutsProcessor) reachedThreshold(amount *big.Int, inactive bool) bool {
+	threshold := self.config.NormalThreshold
+	if inactive {
+		threshold = self.config.InactiveThreshold
+	}
+	return big.NewInt(threshold).Cmp(amount) < 0
 }
 
 func formatPendingPayments(list []*storage.PendingPayment) string {

@@ -266,8 +266,10 @@ otherwise you will get errors on start because of JSON comments.**
     // Gas amount and price for payout tx (advanced users only)
     "gas": "21000",
     "gasPrice": "50000000000",
-    // Send payment only if miner's balance is >= 0.5 Ether
+    // Normally, send payment only if miner's balance is >= 0.5 Ether
     "threshold": 500000000,
+    // If user was inactive for longer than week, send payment if his balance is >= 0.05 Ether
+    "threshold": 50000000,
     // Perform BGSAVE on Redis after successful payouts session
     "bgsave": false
   },

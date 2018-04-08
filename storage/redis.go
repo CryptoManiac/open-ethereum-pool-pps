@@ -327,6 +327,18 @@ func (r *RedisClient) GetBalance(login string) (int64, error) {
 	return int64(value), err // Truncate to GWei
 }
 
+func (r *RedisClient) GetLastActivity(login string) (time.Time, error) {
+	cmd := r.client.HGet(r.formatKey("miners", login), "lastShare")
+	if cmd.Err() == redis.Nil {
+		return time.Unix(0, 0), nil
+	} else if cmd.Err() != nil {
+		return time.Unix(0, 0), cmd.Err()
+	}
+	value, err := cmd.Int64()
+	
+	return time.Unix(value, 0), err
+}
+
 func (r *RedisClient) LockPayouts(login string, amount int64) error {
 	key := r.formatKey("payments", "lock")
 	result := r.client.SetNX(key, join(login, amount), 0).Val()
