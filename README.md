@@ -114,8 +114,9 @@ otherwise you will get errors on start because of JSON comments.**
   "proxy": {
     "enabled": true,
 
-    // Bind HTTP mining endpoint to this IP:PORT
-    "listen": "0.0.0.0:8888",
+    // New work notifications endpoint (see --notify-work option of parity client)
+    // Note that this endpoint should be either local or protected by firewall. Only trusted clients should be allowed to send work notifications.
+    "listen": "127.0.0.1:8888",
 
     // Allow only this header and body size of HTTP request from miners
     "limitHeadersSize": 1024,
@@ -193,7 +194,7 @@ otherwise you will get errors on start because of JSON comments.**
   // Provides JSON data for frontend which is static website
   "api": {
     "enabled": true,
-    // New work notifications endpoint (see --notify-work option of parity client)
+    // Bind API endpoint to this IP:PORT
     "listen": "127.0.0.1:8080",
     // Collect miners stats (hashrate, ...) in this interval
     "statsCollectInterval": "5s",
