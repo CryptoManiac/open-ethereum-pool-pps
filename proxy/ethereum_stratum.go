@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/thanhpk/randstr"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/CryptoManiac/open-ethereum-pool/util"
 	"strings"
 )
@@ -305,7 +306,7 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 		params = []string{
 			cs.Extranonce + params[2],
 			job.HeaderHash,
-			job.HeaderHash,
+			common.Hash{}.Hex(),
 		}
 		
 		for k, v := range params {

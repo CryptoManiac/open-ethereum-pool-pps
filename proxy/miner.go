@@ -12,27 +12,14 @@ import (
 
 var hasher = ethash.New()
 
-func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, params []string) (bool, bool, []string) {
-	hashNoNonce := common.HexToHash(params[1])
-	mixDigest := common.HexToHash(params[2])
-	nonce, _ := strconv.ParseUint(strings.Replace(params[0], "0x", "", -1), 16, 64)
+func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, data []string) (bool, bool, []string) {
+	nonce, _ := strconv.ParseUint(strings.Replace(data[0], "0x", "", -1), 16, 64)
 	shareDiff := s.config.Proxy.Difficulty
 	shareFee := s.config.Proxy.MiningFee
 	potA := s.config.Proxy.PoT_A
 	potCap := s.config.Proxy.PoT_Cap
 
-	data := []string {
-		params[0],
-		params[1],
-		params[2],
-	}
-
-	if hashNoNonce == mixDigest {
-		mixDigest = hasher.ComputeMixDigest(t.Height, hashNoNonce, nonce)
-		data[2] = mixDigest.Hex()
-	}
-
-	h, ok := t.headers[params[1]]
+	h, ok := t.headers[data[1]]
 	if !ok {
 		log.Printf("Stale share from %v@%v", login, ip)
 		return false, false, data
@@ -40,27 +27,21 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, param
 
 	share := Block{
 		number:      h.height,
-		hashNoNonce: hashNoNonce,
-		difficulty:  big.NewInt(shareDiff),
-		nonce:       nonce,
-		mixDigest:   mixDigest,
-	}
-
-	block := Block{
-		number:      h.height,
-		hashNoNonce: hashNoNonce,
+		hashNoNonce: common.HexToHash(data[1]),
 		difficulty:  h.diff,
 		nonce:       nonce,
-		mixDigest:   mixDigest,
+		mixDigest:   common.HexToHash(data[2]),
 	}
 
-	isShare, actualDiff := hasher.Verify(share)
+	// Verify validity against block and share target
+	isShare, isBlock, actualDiff, mixHash := hasher.VerifyShare(share, big.NewInt(shareDiff))
+
+	// Replace provided mixDigest with calculated one
+	data[2] = mixHash.Hex()
 
 	if !isShare {
 		return false, false, data
 	}
-
-	isBlock, _ := hasher.Verify(block)
 
 	if isBlock {
 		ok, err := s.rpc().SubmitBlock(data)
