@@ -136,7 +136,7 @@ func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
 }
 
 func (s *ProxyServer) Start() {
-	log.Printf("Starting proxy on %v", s.config.Proxy.Listen)
+	log.Printf("Starting work listener on %v", s.config.Proxy.Listen)
 	r := mux.NewRouter()
 	r.HandleFunc("/", func (w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
@@ -153,7 +153,7 @@ func (s *ProxyServer) Start() {
 	}
 	err := srv.ListenAndServe()
 	if err != nil {
-		log.Fatalf("Failed to start proxy: %v", err)
+		log.Fatalf("Failed to start work listener: %v", err)
 	}
 }
 
