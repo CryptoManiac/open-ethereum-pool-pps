@@ -9,7 +9,7 @@
 		"limitHeadersSize": 1024,
 		"limitBodySize": 256,
 		"behindReverseProxy": false,
-		"blockRefreshInterval": "120ms",
+		"blockRefreshInterval": "1s",
 		"stateUpdateInterval": "3s",
 		"difficulty": 2000000000,
 		"miningFee": 1.5,
