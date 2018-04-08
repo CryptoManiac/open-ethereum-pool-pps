@@ -47,6 +47,7 @@ type StratumEndpoint struct {
 	Enabled bool   `json:"enabled"`
 	Listen  string `json:"listen"`
 	Protocol string `json:"protocol"`
+	NonceSpace []uint8 `json:"xnSpace"`
 	Timeout string `json:"timeout"`
 	MaxConn int    `json:"maxConn"`
 }

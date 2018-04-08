@@ -8,6 +8,8 @@ import (
 	"io"
 	"errors"
 	"time"
+	"math/rand"
+	"strconv"
 
 	"github.com/thanhpk/randstr"
 	"github.com/ethereum/go-ethereum/common"
@@ -49,12 +51,25 @@ func (jq *JobQueue) FindJob(JobID string, job *JobData) bool {
 	return false
 }
 
+func (s *ProxyServer) makePrefix() string {
+	space := s.config.Proxy.Stratum.NonceSpace
+	if len(space) != 2 || space[1] <= space[0] {
+		return randstr.Hex(1)
+	}
+
+	log.Printf("Selecting nonce prefix between %02x and %02x", space[0], space[1])
+	rand.Seed(time.Now().UnixNano())
+	pfx := rand.Intn(int(space[1] - space[0])) + int(space[0])
+
+	return "0" + strconv.FormatInt(int64(pfx), 16)
+}
+
 // Get unique extranonce
 func (s *ProxyServer) GetExtraNonce() string {
 	var extraNonce string
 
 	for {
-		extraNonce = randstr.Hex(2)
+		extraNonce = s.makePrefix() + randstr.Hex(2)
 		found := true
 
 		for m, _ := range s.sessions {
