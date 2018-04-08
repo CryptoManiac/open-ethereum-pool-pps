@@ -75,6 +75,8 @@ func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
 		default:
 			log.Fatal("Please choose either Stratum-Proxy or EthereumStratum protocol for your stratum endpoint.")
 		}
+	} else {
+		log.Fatal("Stratum endpoint is not configured properly.")
 	}
 
 	proxy.fetchBlockTemplate()
