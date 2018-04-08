@@ -136,7 +136,15 @@ func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
 func (s *ProxyServer) Start() {
 	log.Printf("Starting proxy on %v", s.config.Proxy.Listen)
 	r := mux.NewRouter()
-	r.Handle("/", s)
+	r.HandleFunc("/", func (w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			http.Error(w, "rpc: POST method required, received "+r.Method, 405)
+			return
+		}
+		// TODO use work data directly, without fetching it again
+		log.Printf("Received new job notification")
+		s.fetchBlockTemplate()
+	})
 	srv := &http.Server{
 		Addr:           s.config.Proxy.Listen,
 		Handler:        r,
@@ -145,16 +153,6 @@ func (s *ProxyServer) Start() {
 	if err != nil {
 		log.Fatalf("Failed to start proxy: %v", err)
 	}
-}
-
-func (s *ProxyServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.Error(w, "rpc: POST method required, received "+r.Method, 405)
-		return
-	}
-	
-	// TODO use work data directly, without fetching it again
-	s.fetchBlockTemplate()
 }
 
 func (s *ProxyServer) rpc() *rpc.RPCClient {
