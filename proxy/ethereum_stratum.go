@@ -12,7 +12,6 @@ import (
 	"math/rand"
 
 	"github.com/thanhpk/randstr"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/CryptoManiac/open-ethereum-pool/util"
 	"strings"
 )
@@ -328,7 +327,7 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 		params = []string{
 			cs.Extranonce + params[2],
 			job.HeaderHash,
-			common.Hash{}.Hex(),
+			"0000000000000000000000000000000000000000000000000000000000000000",
 		}
 		
 		for k, v := range params {
