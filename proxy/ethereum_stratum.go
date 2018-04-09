@@ -72,6 +72,9 @@ func (s *ProxyServer) makePrefix() string {
 func (s *ProxyServer) GetExtraNonce() string {
 	var extraNonce string
 
+	s.sessionsMu.RLock()
+	defer s.sessionsMu.RUnlock()
+
 	for {
 		extraNonce = s.makePrefix() + randstr.Hex(2)
 		found := false
