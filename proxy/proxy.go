@@ -144,7 +144,7 @@ func (s *ProxyServer) Start() {
 			return
 		}
 		// TODO use work data directly, without fetching it again
-		log.Printf("Received new job notification")
+		log.Printf("Received new job notification from %v", s.remoteAddr(r))
 		s.fetchBlockTemplate()
 	})
 	srv := &http.Server{
@@ -155,6 +155,12 @@ func (s *ProxyServer) Start() {
 	if err != nil {
 		log.Fatalf("Failed to start work listener: %v", err)
 	}
+}
+
+
+func (s *ProxyServer) remoteAddr(r *http.Request) string {
+	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+	return ip
 }
 
 func (s *ProxyServer) rpc() *rpc.RPCClient {
