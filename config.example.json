@@ -22,9 +22,10 @@
 
 		"stratum": {
 			"enabled": true,
-			"listen": "0.0.0.0:8008",
-			"protocol": "Stratum-Proxy",
+			"listen": "0.0.0.0:3333",
+			"protocol": "EthereumStratum",
 			"xnSpace": [0, 255],
+			"xnSize": 2,
 			"timeout": "120s",
 			"maxConn": 8192
 		},

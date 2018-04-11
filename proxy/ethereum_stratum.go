@@ -61,7 +61,7 @@ func (s *ProxyServer) makePrefix() string {
 		rand.Seed(time.Now().UnixNano())
 		prefix = rand.Intn(int(space[1] - space[0])) + int(space[0])
 	default:
-		prefix = rand.Intn(255)
+		return ""
 	}
 	
 	return fmt.Sprintf("%02x", prefix)
@@ -71,11 +71,17 @@ func (s *ProxyServer) makePrefix() string {
 func (s *ProxyServer) GetExtraNonce() string {
 	var extraNonce string
 
+	nonceSize := s.config.Proxy.Stratum.NonceSize
+	if nonceSize < 2 {
+		nonceSize = 2
+	}
+
 	s.sessionsMu.RLock()
 	defer s.sessionsMu.RUnlock()
 
 	for {
-		extraNonce = s.makePrefix() + randstr.Hex(2)
+		prefix := s.makePrefix()
+		extraNonce = prefix + randstr.Hex(nonceSize - len(prefix) / 2)
 		found := false
 
 		for m, _ := range s.sessions {
