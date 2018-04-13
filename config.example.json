@@ -98,7 +98,9 @@
 		"gasPrice": "50000000000",
 		"autoGas": true,
 		"thresholdNormal": 500000000,
+		"normalFee": 0,
 		"thresholdInactive": 50000000,
+		"inactiveFee": 100000,
 		"bgsave": false
 	},
 
