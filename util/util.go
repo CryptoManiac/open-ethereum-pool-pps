@@ -57,24 +57,29 @@ func FormatRatReward(reward *big.Rat) string {
 	return reward.FloatString(8)
 }
 
-func GetShareReward(shareDiff, netDiff int64, fee float64) float64 {
-	wei := new(big.Rat).SetInt(Ether)
-	wei.Mul(wei, new(big.Rat).SetInt64(3))
-
+// Calculate PPS rate at given block and share height
+func GetShareReward(shareDiff, netDiff int64, height, topHeight uint64, fee float64) float64 {
+	base := new(big.Rat).SetInt(Ether)
+	base.Mul(base, new(big.Rat).SetInt64(3))
 	feePercent := new(big.Rat).SetFloat64(fee / 100)
-	feeValue := new(big.Rat).Mul(wei, feePercent)
-
-	wei.Sub(wei, feeValue)
+	feeValue := new(big.Rat).Mul(base, feePercent)
+	base.Sub(base, feeValue)
+	
+	R := new(big.Rat).SetInt64(int64(height))
+	R.Add(R, new(big.Rat).SetInt64(8))
+	R.Sub(R, new(big.Rat).SetInt64(int64(topHeight)))
+	R.Mul(R, base)
+	R.Quo(R, new(big.Rat).SetInt64(8))
+	
+	wei := R
 	wei.Mul(wei, new(big.Rat).SetInt64(shareDiff))
 	wei.Quo(wei, new(big.Rat).SetInt64(netDiff))
-
 	shannon := new(big.Rat).SetInt(Shannon)
 	inShannon := new(big.Rat).Quo(wei, shannon)
-	value, _ := inShannon.Float64()
-
-	return value
+	ppsRate, _ := inShannon.Float64()
+	
+	return ppsRate
 }
-
 
 func StringInSlice(a string, list []string) bool {
 	for _, b := range list {
