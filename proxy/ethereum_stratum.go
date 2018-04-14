@@ -46,7 +46,7 @@ func (jq *JobQueue) JobEnqueue(seedHash, headerHash string, job *JobData) {
 	jq.topId += 1;
 
 	*job = JobData{
-		JobID: fmt.Sprintf("%08x", jq.topId),
+		JobID: fmt.Sprintf("%x", jq.topId),
 		SeedHash: seedHash,
 		HeaderHash: headerHash,
 	}
@@ -69,7 +69,7 @@ func (jq *JobQueue) FindJob(JobID string, job *JobData) bool {
 func (jq *JobQueue) GetTopJob(job *JobData) bool {
 	if len(jq.items) > 0 {
 		*job = jq.items[len(jq.items) - 1]
-		return job.JobID == fmt.Sprintf("%08x", jq.topId)
+		return job.JobID == fmt.Sprintf("%x", jq.topId)
 	}
 	
 	return false
@@ -404,17 +404,18 @@ func (s *ProxyServer) broadcastNewESJobs() {
 	s.sessionsMu.RLock()
 	defer s.sessionsMu.RUnlock()
 
+	s.jobsMu.RLock()
+	job := JobData{}
+	s.Jobs.JobEnqueue(t.Seed, t.Header, &job)
+	s.jobsMu.RUnlock()
+
 	count := len(s.sessions)
-	log.Printf("Broadcasting new job to %v ethereum stratum miners", count)
+	log.Printf("Broadcasting new job %s to %v ethereum stratum miners", job.JobID, count)
 
 	start := time.Now()
 	bcast := make(chan int, 1024)
 	n := 0
 
-	s.jobsMu.RLock()
-	job := JobData{}
-	s.Jobs.JobEnqueue(t.Seed, t.Header, &job)
-	s.jobsMu.RUnlock()
 
 	for m, _ := range s.sessions {
 		n++
