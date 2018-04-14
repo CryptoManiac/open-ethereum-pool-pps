@@ -24,20 +24,36 @@ type JobData struct {
 }
 
 type JobQueue struct {
+	topId int
 	items []JobData
 }
 
-func (jq *JobQueue) JobEnqueue(job JobData) bool {
-	if len(jq.items) < 3 {
-		jq.items = append(jq.items, job)
-		return true
+func (jq *JobQueue) Init() {
+	if len(jq.items) == 0 {
+		jq.items = []JobData{ JobData{}, JobData{}, JobData{} }
+		jq.topId = 1
+	}
+}
+
+func (jq *JobQueue) JobEnqueue(seedHash, headerHash string, job *JobData) {
+	if (seedHash[0:2] == "0x") {
+		seedHash = seedHash[2:]
+	}
+	if (headerHash[0:2] == "0x") {
+		headerHash = headerHash[2:]
+	}
+
+	jq.topId += 1;
+
+	*job = JobData{
+		JobID: fmt.Sprintf("%08x", jq.topId),
+		SeedHash: seedHash,
+		HeaderHash: headerHash,
 	}
 
 	copy(jq.items[0:], jq.items[1:])
 	jq.items = jq.items[:len(jq.items)-1]
-	jq.items = append(jq.items, job)
-
-	return true
+	jq.items = append(jq.items, *job)
 }
 
 func (jq *JobQueue) FindJob(JobID string, job *JobData) bool {
@@ -47,6 +63,15 @@ func (jq *JobQueue) FindJob(JobID string, job *JobData) bool {
 			return true
 		}
 	}
+	return false
+}
+
+func (jq *JobQueue) GetTopJob(job *JobData) bool {
+	if len(jq.items) > 0 {
+		*job = jq.items[len(jq.items) - 1]
+		return job.JobID == fmt.Sprintf("%08x", jq.topId)
+	}
+	
 	return false
 }
 
@@ -117,6 +142,10 @@ func (s *ProxyServer) ListenES(){
 	var accept = make(chan int, s.config.Proxy.Stratum.MaxConn)
 	n := 0
 
+	// Init jobs queue
+	s.Jobs = &JobQueue{}
+	s.Jobs.Init()
+
 	for {
 		conn, err := server.AcceptTCP()
 		if err != nil {
@@ -131,7 +160,7 @@ func (s *ProxyServer) ListenES(){
 			continue
 		}
 		n += 1
-		cs := &Session{ conn: conn, ip: ip, Extranonce: s.GetExtraNonce(), Jobs: &JobQueue{} }
+		cs := &Session{ conn: conn, ip: ip, Extranonce: s.GetExtraNonce() }
 
 		accept <- n
 		go func(cs *Session) {
@@ -238,15 +267,12 @@ func(cs *Session) sendJob(s *ProxyServer, id *json.RawMessage) error {
 		}
 	}
 
-	job := JobData{
-		JobID: randstr.Hex(4),
-		SeedHash: reply[1],
-		HeaderHash: reply[0],
+	s.jobsMu.RLock()
+	job := JobData {}
+	if !s.Jobs.GetTopJob(&job) {
+		return cs.sendESError(id, "unable to get current job")
 	}
-
-	if !cs.Jobs.JobEnqueue(job) {
-		return cs.sendESError(id, "unable to create job")
-	}
+	s.jobsMu.RUnlock()
 
 	resp := EthStratumReq{
 		Method:"mining.notify",
@@ -325,7 +351,7 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 		}
 
 		var job JobData
-		if !cs.Jobs.FindJob(params[1], &job) {
+		if !s.Jobs.FindJob(params[1], &job) {
 			log.Printf("Unknown job %v from %v@%v", params[1], cs.login, cs.ip)
 			return cs.sendESError(req.Id, "unknown job id")
 		}
@@ -385,29 +411,16 @@ func (s *ProxyServer) broadcastNewESJobs() {
 	bcast := make(chan int, 1024)
 	n := 0
 
+	s.jobsMu.RLock()
+	job := JobData{}
+	s.Jobs.JobEnqueue(t.Seed, t.Header, &job)
+	s.jobsMu.RUnlock()
+
 	for m, _ := range s.sessions {
 		n++
 		bcast <- n
 
 		go func(cs *Session) {
-			job := JobData{
-				JobID: randstr.Hex(4),
-				SeedHash: t.Seed,
-				HeaderHash: t.Header,
-			}
-
-			if (job.SeedHash[0:2] == "0x") {
-				job.SeedHash = job.SeedHash[2:]
-			}
-			if (job.HeaderHash[0:2] == "0x") {
-				job.HeaderHash = job.HeaderHash[2:]
-			}
-
-			if !cs.Jobs.JobEnqueue(job) {
-				log.Printf("Unable to queue job for: %v@%v", cs.login, cs.ip)
-				s.removeSession(cs)
-				return
-			}
 
 			resp := EthStratumReq{
 				Method:"mining.notify",

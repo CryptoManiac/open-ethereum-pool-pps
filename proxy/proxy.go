@@ -32,6 +32,10 @@ type ProxyServer struct {
 	sessionsMu sync.RWMutex
 	sessions   map[*Session]struct{}
 	timeout    time.Duration
+
+	// EthereumStratum jobs queue
+	jobsMu sync.RWMutex
+	Jobs *JobQueue
 }
 
 type Session struct {
@@ -42,9 +46,8 @@ type Session struct {
 	conn  *net.TCPConn
 	login string
 
-	// EthereumStratum internals
+	// EthereumStratum extranonce
 	Extranonce string
-	Jobs *JobQueue
 }
 
 func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
