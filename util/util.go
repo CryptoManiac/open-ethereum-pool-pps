@@ -58,13 +58,21 @@ func FormatRatReward(reward *big.Rat) string {
 	return reward.FloatString(8)
 }
 
-func GetPPSRate(shareDiff, netDiff int64, fee float64) float64 {
-	// Calculate current PPS rate
-	wei := new(big.Rat).SetInt(Ether)
-	wei.Mul(wei, new(big.Rat).SetInt64(3))
+// Calculate PPS rate at given block and share height
+func GetPPSRate(shareDiff, netDiff int64, height, topHeight uint64, fee float64) float64 {
+	base := new(big.Rat).SetInt(Ether)
+	base.Mul(base, new(big.Rat).SetInt64(3))
 	feePercent := new(big.Rat).SetFloat64(fee / 100)
-	feeValue := new(big.Rat).Mul(wei, feePercent)
-	wei.Sub(wei, feeValue)
+	feeValue := new(big.Rat).Mul(base, feePercent)
+	base.Sub(base, feeValue)
+	
+	R := new(big.Rat).SetInt64(int64(height))
+	R.Add(R, new(big.Rat).SetInt64(8))
+	R.Sub(R, new(big.Rat).SetInt64(int64(topHeight)))
+	R.Mul(R, base)
+	R.Quo(R, new(big.Rat).SetInt64(8))
+	
+	wei := R
 	wei.Mul(wei, new(big.Rat).SetInt64(shareDiff))
 	wei.Quo(wei, new(big.Rat).SetInt64(netDiff))
 	shannon := new(big.Rat).SetInt(Shannon)
@@ -74,9 +82,9 @@ func GetPPSRate(shareDiff, netDiff int64, fee float64) float64 {
 	return ppsRate
 }
 
-func GetShareReward(shareDiff, actualDiff, netDiff int64, potA, potCap, fee float64) float64 {
+func GetShareReward(shareDiff, actualDiff, netDiff int64, height, topHeight uint64, potA, potCap, fee float64) float64 {
 	// Standard PPS rate at given difficulty
-	ppsRate := GetPPSRate(shareDiff, netDiff, fee)
+	ppsRate := GetPPSRate(shareDiff, netDiff, height, topHeight, fee)
 	
 	// Fallback to normal PPS if PoT context is not configured properly
 	if potA >= 1 || potA == 0 || potCap == 0 {

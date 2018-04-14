@@ -52,7 +52,7 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, data 
 			return false, false, data
 		} else {
 			s.fetchBlockTemplate()
-			exist, err := s.backend.WriteBlock(login, id, data, shareDiff, actualDiff, potA, potCap, shareFee, h.diff.Int64(), h.height, s.hashrateExpiration)
+			exist, err := s.backend.WriteBlock(login, id, data, shareDiff, actualDiff, potA, potCap, shareFee, h.diff.Int64(), h.height, t.Height, s.hashrateExpiration)
 			if exist {
 				return true, false, data
 			}
@@ -64,7 +64,7 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, data 
 			log.Printf("Block found by miner %v@%v at height %d", login, ip, h.height)
 		}
 	} else {
-		exist, err := s.backend.WriteShare(login, id, data, shareDiff, actualDiff, potA, potCap, shareFee, h.diff.Int64(), h.height, s.hashrateExpiration)
+		exist, err := s.backend.WriteShare(login, id, data, shareDiff, actualDiff, potA, potCap, shareFee, h.diff.Int64(), h.height, t.Height, s.hashrateExpiration)
 		if exist {
 			return true, false, data
 		}
