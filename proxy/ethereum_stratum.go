@@ -342,6 +342,15 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 		}
 
 		return cs.sendJob(s, req.Id)
+
+	case "mining.extranonce.subscribe":
+		resp := JSONRpcResp{Id:req.Id, Result:true, Error:nil}
+		if err := cs.sendESResult(resp); err != nil{
+			return err
+		}
+
+		return nil
+
 	case "mining.submit":
 		var params []string
 		if err := json.Unmarshal(*req.Params, &params); err != nil{
