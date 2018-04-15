@@ -253,20 +253,6 @@ func(cs *Session) sendESReq(resp EthStratumReq)  error {
 }
 
 func(cs *Session) sendJob(s *ProxyServer, id *json.RawMessage) error {
-	reply, errReply := s.handleGetWorkRPC(cs)
-	if errReply != nil {
-		return cs.sendESError(id, []string{
-			string(errReply.Code),
-			errReply.Message,
-		})
-	}
-
-	for k, v := range reply {
-		if v[0:2] == "0x" {
-			reply[k] = v[2:]
-		}
-	}
-
 	s.jobsMu.RLock()
 	job := JobData {}
 	if !s.Jobs.GetTopJob(&job) {
@@ -433,7 +419,6 @@ func (s *ProxyServer) broadcastNewESJobs() {
 	start := time.Now()
 	bcast := make(chan int, 1024)
 	n := 0
-
 
 	for m, _ := range s.sessions {
 		n++
