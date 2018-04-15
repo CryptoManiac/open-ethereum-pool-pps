@@ -297,6 +297,11 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 			log.Println("Malformed stratum request params from", cs.ip)
 			return err
 		}
+		
+		if len(params) != 2 {
+			log.Println("Malformed mining.subscribe request params from", cs.ip)
+			return errors.New("Invalid params")
+		}
 
 		if params[1] != "EthereumStratum/1.0.0"{
 			log.Println("Unsupported stratum version from ", cs.ip)
@@ -309,7 +314,8 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 	case "mining.authorize":
 		var params []string
 		err := json.Unmarshal(*req.Params, &params)
-		if err != nil {
+		if err != nil || len(params) < 1 {
+			log.Println("Malformed mining.authorize request params from", cs.ip)
 			return errors.New("invalid params")
 		}
 		splitData := strings.Split(params[0], ".")
@@ -342,8 +348,11 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 			return err
 		}
 		
+		if len(params) != 3 {
+			log.Println("Malformed mining.submit request params from", cs.ip)
+			return errors.New("invalid params")
+		}
 		
-
 		splitData := strings.Split(params[0], ".")
 		id := "0"
 		if len(splitData) > 1 {
