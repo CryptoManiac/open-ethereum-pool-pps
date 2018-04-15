@@ -60,18 +60,21 @@ func FormatRatReward(reward *big.Rat) string {
 
 // Calculate PPS rate at given block and share height
 func GetPPSRate(shareDiff, netDiff int64, height, topHeight uint64, fee float64) float64 {
+	//  base_reward = (1 - fee) * 3 ETH
 	base := new(big.Rat).SetInt(Ether)
 	base.Mul(base, new(big.Rat).SetInt64(3))
 	feePercent := new(big.Rat).SetFloat64(fee / 100)
 	feeValue := new(big.Rat).Mul(base, feePercent)
 	base.Sub(base, feeValue)
 	
+	// block_reward = (share_height + 8 - top_height) * base_reward / 8
 	R := new(big.Rat).SetInt64(int64(height))
 	R.Add(R, new(big.Rat).SetInt64(8))
 	R.Sub(R, new(big.Rat).SetInt64(int64(topHeight)))
 	R.Mul(R, base)
 	R.Quo(R, new(big.Rat).SetInt64(8))
 	
+	// pps_rate = block_reward * share_diff / network_diff
 	wei := R
 	wei.Mul(wei, new(big.Rat).SetInt64(shareDiff))
 	wei.Quo(wei, new(big.Rat).SetInt64(netDiff))
