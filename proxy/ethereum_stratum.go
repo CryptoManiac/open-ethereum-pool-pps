@@ -7,7 +7,6 @@ import (
 	"bufio"
 	"io"
 	"fmt"
-	"errors"
 	"time"
 	"math/rand"
 
@@ -286,7 +285,7 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 		
 		if len(params) != 2 {
 			log.Println("Malformed mining.subscribe request params from", cs.ip)
-			return errors.New("Invalid params")
+			return cs.sendESError(req.Id, "Invalid params")
 		}
 
 		if params[1] != "EthereumStratum/1.0.0"{
@@ -302,7 +301,7 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 		err := json.Unmarshal(*req.Params, &params)
 		if err != nil || len(params) < 1 {
 			log.Println("Malformed mining.authorize request params from", cs.ip)
-			return errors.New("invalid params")
+			return cs.sendESError(req.Id, "Invalid params")
 		}
 		splitData := strings.Split(params[0], ".")
 		params[0] = splitData[0]
@@ -345,7 +344,7 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 		
 		if len(params) != 3 {
 			log.Println("Malformed mining.submit request params from", cs.ip)
-			return errors.New("invalid params")
+			return cs.sendESError(req.Id, "Invalid params")
 		}
 		
 		splitData := strings.Split(params[0], ".")
