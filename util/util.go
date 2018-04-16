@@ -11,6 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 )
 
+const MaxUncleLag = 2
+
 var Ether = math.BigPow(10, 18)
 var Shannon = math.BigPow(10, 9)
 
@@ -86,6 +88,11 @@ func GetPPSRate(shareDiff, netDiff int64, height, topHeight uint64, fee float64)
 }
 
 func GetShareReward(shareDiff, actualDiff, netDiff int64, height, topHeight uint64, potA, potCap, fee float64) float64 {
+	// Don't reward shares which are too lagging behind the tip
+	if topHeight-height > MaxUncleLag {
+		return 0.0
+	}
+
 	// Standard PPS rate at given difficulty
 	ppsRate := GetPPSRate(shareDiff, netDiff, height, topHeight, fee)
 	

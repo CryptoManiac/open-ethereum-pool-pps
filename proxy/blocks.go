@@ -13,7 +13,7 @@ import (
 	"github.com/CryptoManiac/open-ethereum-pool/util"
 )
 
-const maxBacklog = 3
+const MaxBacklog = 6
 
 type heightDiffPair struct {
 	diff   *big.Int
@@ -82,7 +82,7 @@ func (s *ProxyServer) fetchBlockTemplate() {
 	}
 	if t != nil {
 		for k, v := range t.headers {
-			if v.height > height-maxBacklog {
+			if v.height > height-MaxBacklog {
 				newTemplate.headers[k] = v
 			}
 		}

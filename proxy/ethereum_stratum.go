@@ -29,7 +29,10 @@ type JobQueue struct {
 
 func (jq *JobQueue) Init() {
 	if len(jq.items) == 0 {
-		jq.items = []JobData{ JobData{}, JobData{}, JobData{} }
+		jq.items = []JobData {}
+		for i := 0; i < MaxBacklog; i++ {
+			jq.items = append(jq.items, JobData{})
+		}
 		jq.topId = 1
 	}
 }
@@ -51,7 +54,7 @@ func (jq *JobQueue) JobEnqueue(seedHash, headerHash string, job *JobData) {
 	}
 
 	copy(jq.items[0:], jq.items[1:])
-	jq.items = jq.items[:len(jq.items)-1]
+	jq.items = jq.items[:MaxBacklog-1]
 	jq.items = append(jq.items, *job)
 }
 
