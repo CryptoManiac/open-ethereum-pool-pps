@@ -10,6 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 )
 
+const maxUncleLag = 2
+
 var Ether = math.BigPow(10, 18)
 var Shannon = math.BigPow(10, 9)
 
@@ -59,18 +61,26 @@ func FormatRatReward(reward *big.Rat) string {
 
 // Calculate PPS rate at given block and share height
 func GetShareReward(shareDiff, netDiff int64, height, topHeight uint64, fee float64) float64 {
+	// Don't reward shares which are too lagging behind the tip
+	if topHeight-height > maxUncleLag {
+		return 0.0
+	}
+
+	// Base reward
 	base := new(big.Rat).SetInt(Ether)
 	base.Mul(base, new(big.Rat).SetInt64(3))
 	feePercent := new(big.Rat).SetFloat64(fee / 100)
 	feeValue := new(big.Rat).Mul(base, feePercent)
 	base.Sub(base, feeValue)
 	
+	// Reward with given tip and share height
 	R := new(big.Rat).SetInt64(int64(height))
 	R.Add(R, new(big.Rat).SetInt64(8))
 	R.Sub(R, new(big.Rat).SetInt64(int64(topHeight)))
 	R.Mul(R, base)
 	R.Quo(R, new(big.Rat).SetInt64(8))
 	
+	// Actual share reward
 	wei := R
 	wei.Mul(wei, new(big.Rat).SetInt64(shareDiff))
 	wei.Quo(wei, new(big.Rat).SetInt64(netDiff))
