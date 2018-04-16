@@ -29,26 +29,17 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, param
 	share := Block{
 		number:      h.height,
 		hashNoNonce: common.HexToHash(hashNoNonce),
-		difficulty:  big.NewInt(shareDiff),
-		nonce:       nonce,
-		mixDigest:   common.HexToHash(mixDigest),
-	}
-
-	block := Block{
-		number:      h.height,
-		hashNoNonce: common.HexToHash(hashNoNonce),
 		difficulty:  h.diff,
 		nonce:       nonce,
 		mixDigest:   common.HexToHash(mixDigest),
 	}
 
-	isShare, actualDiff := hasher.Verify(share)
+	// Verify validity against block and share target
+	isShare, isBlock, actualDiff, _ := hasher.VerifyShare(share, big.NewInt(shareDiff))
 
 	if !isShare {
 		return false, false
 	}
-
-	isBlock, _ := hasher.Verify(block)
 
 	if isBlock {
 		ok, err := s.rpc().SubmitBlock(params)
