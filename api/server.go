@@ -22,8 +22,9 @@ type ApiConfig struct {
 	HashrateWindow       string `json:"hashrateWindow"`
 	HashrateLargeWindow  string `json:"hashrateLargeWindow"`
 	Payments             int64  `json:"payments"`
-	LongShifts               int64  `json:"longShifts"`
-	ShortShifts               int64  `json:"shortShifts"`
+	Blocks               int64  `json:"blocks"`
+	LongShifts           int64  `json:"longShifts"`
+	ShortShifts          int64  `json:"shortShifts"`
 	PurgeOnly            bool   `json:"purgeOnly"`
 	PurgeInterval        string `json:"purgeInterval"`
 }
@@ -131,7 +132,7 @@ func (s *ApiServer) purgeStale() {
 
 func (s *ApiServer) collectStats() {
 	start := time.Now()
-	stats, err := s.backend.CollectStats(s.hashrateWindow, s.config.Payments)
+	stats, err := s.backend.CollectStats(s.hashrateWindow, s.config.Payments, s.config.Blocks)
 	if err != nil {
 		log.Printf("Failed to fetch stats from backend: %v", err)
 		return

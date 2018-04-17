@@ -61,6 +61,7 @@
 		"hashrateWindow": "30m",
 		"hashrateLargeWindow": "3h",
 		"payments": 30,
+		"blocks": 50,
 		"longShifts": 30,
 		"shortShifts": 24
 	},

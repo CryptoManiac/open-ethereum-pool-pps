@@ -615,7 +615,7 @@ func (r *RedisClient) FlushShifts(windowLong, windowShort time.Duration, users [
 	return total, nil
 }
 
-func (r *RedisClient) CollectStats(smallWindow time.Duration, maxPayments int64) (map[string]interface{}, error) {
+func (r *RedisClient) CollectStats(smallWindow time.Duration, maxPayments, maxBlocks int64) (map[string]interface{}, error) {
 	window := int64(smallWindow / time.Second)
 	stats := make(map[string]interface{})
 
@@ -628,7 +628,7 @@ func (r *RedisClient) CollectStats(smallWindow time.Duration, maxPayments int64)
 		tx.ZRemRangeByScore(r.formatKey("hashrate"), "-inf", fmt.Sprint("(", now-window))
 		tx.ZRangeWithScores(r.formatKey("hashrate"), 0, -1)
 		tx.HGetAllMap(r.formatKey("stats"))
-		tx.ZRevRangeWithScores(r.formatKey("blocks", "candidates"), 0, -1)
+		tx.ZRevRangeWithScores(r.formatKey("blocks", "candidates"), 0, maxBlocks-1)
 		tx.ZRevRangeWithScores(r.formatKey("payments", "all"), 0, maxPayments-1)
 		tx.ZCard(r.formatKey("blocks", "candidates"))
 		tx.ZCard(r.formatKey("payments", "all"))
