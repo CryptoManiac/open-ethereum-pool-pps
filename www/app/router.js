@@ -13,10 +13,7 @@ Router.map(function() {
   });
   this.route('not-found');
 
-  this.route('blocks', function() {
-    this.route('immature');
-    this.route('pending');
-  });
+  this.route('blocks');
 
   this.route('help');
   this.route('payments');
