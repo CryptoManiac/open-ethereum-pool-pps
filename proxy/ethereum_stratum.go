@@ -374,22 +374,30 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 			}
 		}
 
-		reply, errReply := s.handleTCPSubmitRPC(cs, id, params)
-		if errReply != nil {
-			return cs.sendESError(req.Id, []string{
-				string(errReply.Code),
-				errReply.Message,
+		callback := func(reply bool, errReply *ErrorReply) {
+			closeOnErr := func(err error) {
+				if err != nil {
+					// Close connection if there are any errors
+					cs.conn.Close()
+					s.removeSession(cs)
+				}
+			}
+
+			if errReply != nil {
+				closeOnErr(cs.sendESError(req.Id, []string{
+					string(errReply.Code),
+					errReply.Message,
+				}))
+				return
+			}
+
+			resp := cs.sendESResult(JSONRpcResp{
+				Id: req.Id,
+				Result: reply,
 			})
+			closeOnErr(resp)
 		}
-		resp := JSONRpcResp{
-			Id: req.Id,
-			Result: reply,
-		}
-
-		if err := cs.sendESResult(resp); err != nil{
-			return err
-		}
-
+		go s.handleTCPSubmitRPC(cs, id, params, callback)
 		return nil
 
 	default:
