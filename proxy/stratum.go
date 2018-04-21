@@ -128,11 +128,22 @@ func (cs *Session) handleTCPMessage(s *ProxyServer, req *StratumReq) error {
 			log.Println("Malformed stratum request params from", cs.ip)
 			return err
 		}
-		reply, errReply := s.handleTCPSubmitRPC(cs, req.Worker, params)
-		if errReply != nil {
-			return cs.sendTCPError(req.Id, errReply)
+		callback := func(reply bool, errReply *ErrorReply) {
+			closeOnErr := func(err error) {
+				if err != nil {
+					// Close connection if there are any errors
+					cs.conn.Close()
+					s.removeSession(cs)
+				}
+			}
+			if errReply != nil {
+				closeOnErr(cs.sendTCPError(req.Id, errReply))
+				return
+			}
+			closeOnErr(cs.sendTCPResult(req.Id, &reply))
 		}
-		return cs.sendTCPResult(req.Id, &reply)
+		go s.handleTCPSubmitRPC(cs, req.Worker, params, callback)
+		return nil
 	case "eth_submitHashrate":
 		return cs.sendTCPResult(req.Id, true)
 	default:

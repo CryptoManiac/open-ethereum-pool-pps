@@ -42,15 +42,19 @@ func (s *ProxyServer) handleGetWorkRPC(cs *Session) ([]string, *ErrorReply) {
 }
 
 // Stratum
-func (s *ProxyServer) handleTCPSubmitRPC(cs *Session, id string, params []string) (bool, *ErrorReply) {
+type submitCB func(bool, *ErrorReply)
+func (s *ProxyServer) handleTCPSubmitRPC(cs *Session, id string, params []string, callback submitCB) {
+	result, err := false, &ErrorReply{Code: 25, Message: "Not subscribed"}
+
 	s.sessionsMu.RLock()
 	_, ok := s.sessions[cs]
 	s.sessionsMu.RUnlock()
-
-	if !ok {
-		return false, &ErrorReply{Code: 25, Message: "Not subscribed"}
+	
+	if ok {
+		result, err = s.handleSubmitRPC(cs, cs.login, id, params)
 	}
-	return s.handleSubmitRPC(cs, cs.login, id, params)
+
+	callback(result, err)
 }
 
 func (s *ProxyServer) handleSubmitRPC(cs *Session, login, id string, params []string) (bool, *ErrorReply) {
