@@ -8,7 +8,6 @@ import (
 	"io"
 	"fmt"
 	"time"
-	"math/rand"
 
 	"github.com/thanhpk/randstr"
 	"github.com/CryptoManiac/open-ethereum-pool/util"
@@ -26,6 +25,7 @@ type JobQueue struct {
 	topId int
 	items []JobData
 }
+
 
 func (jq *JobQueue) Init() {
 	if len(jq.items) == 0 {
@@ -77,53 +77,65 @@ func (jq *JobQueue) GetTopJob(job *JobData) bool {
 	return false
 }
 
-func (s *ProxyServer) makePrefix() string {
-	// Extranonce prefix
-	var prefix int
-	
-	switch space := s.config.Proxy.Stratum.NonceSpace; len(space) {
-	case 1:
-		prefix = int(space[0])
-	case 2:
-		rand.Seed(time.Now().UnixNano())
-		prefix = rand.Intn(int(space[1] - space[0])) + int(space[0])
-	default:
-		return ""
-	}
-	
-	return fmt.Sprintf("%02x", prefix)
+type NoncePool struct {
+	nonceSize int
+	nonces []string
 }
 
-// Get unique extranonce
-func (s *ProxyServer) GetExtraNonce() string {
-	var extraNonce string
+func (p *NoncePool) Init(nonceSize int, prefixSpace []uint8) {
+	makeNonces := func(prefixes []string, nonceSize int) []string {
+		ranges := []int {0xff, 0xffff, 0xffffff}
+		if nonceSize < 1 || nonceSize > 3 {
+			nonceSize = 2
+		}
+		var nonces []string
 
-	nonceSize := s.config.Proxy.Stratum.NonceSize
-	if nonceSize < 2 {
-		nonceSize = 2
-	}
-
-	s.sessionsMu.RLock()
-	defer s.sessionsMu.RUnlock()
-
-	for {
-		prefix := s.makePrefix()
-		extraNonce = prefix + randstr.Hex(nonceSize - len(prefix) / 2)
-		found := false
-
-		for m, _ := range s.sessions {
-			if m.Extranonce == extraNonce {
-				found = true
-				break
+		if len(prefixes) > 0 {
+			format := fmt.Sprintf("%%0%dx", (nonceSize - 1) * 2)
+			for i := range prefixes {
+				for j := 0; j < ranges[nonceSize - 2]; j++ {
+					nonces = append(nonces, prefixes[i] + fmt.Sprintf(format, j))
+				}
+			}
+		} else {
+			format := fmt.Sprintf("%%0%dx", nonceSize * 2)
+			for i := 0; i < ranges[nonceSize - 1]; i++ {
+				nonces = append(nonces, fmt.Sprintf(format, i))
 			}
 		}
-
-		if !found {
-			break
-		}
+		
+		return nonces
 	}
+	
+	var prefixes []string
 
-	return extraNonce
+	switch len(prefixSpace) {
+	case 1:
+		prefixes = make([]string, 1)
+		prefixes[0] = fmt.Sprintf("%02x", prefixSpace[0])
+	case 2:
+		prefixes = make([]string, int(prefixSpace[1] - prefixSpace[0]))
+		for i := range prefixes {
+			prefixes[i] = fmt.Sprintf("%02x", int(prefixSpace[0]) + i)
+		}
+	default:
+		prefixes = make([]string, 0)
+	}
+	
+	p.nonces = makeNonces(prefixes, nonceSize)
+}
+
+func (p *NoncePool) peekNonce() string {
+	if len(p.nonces) == 0 {
+		return ""
+	}
+	var nonce string
+	nonce, p.nonces = p.nonces[0], p.nonces[1:]
+	return nonce
+}
+
+func (p *NoncePool) keepNonce(nonce string) {
+	p.nonces = append(p.nonces, nonce)
 }
 
 func (s *ProxyServer) ListenES(){
@@ -147,27 +159,37 @@ func (s *ProxyServer) ListenES(){
 	// Init jobs queue
 	s.Jobs = &JobQueue{}
 	s.Jobs.Init()
+	
+	s.NoncePool = &NoncePool{}
+	s.NoncePool.Init(s.config.Proxy.Stratum.NonceSize, s.config.Proxy.Stratum.NonceSpace)
 
 	for {
 		conn, err := server.AcceptTCP()
 		if err != nil {
 			continue
 		}
+
 		conn.SetKeepAlive(true)
 
 		ip, _, _ := net.SplitHostPort(conn.RemoteAddr().String())
 
-		if s.policy.IsBanned(ip) || !s.policy.ApplyLimitPolicy(ip) {
+		s.noncesMu.RLock()
+		nonce := s.NoncePool.peekNonce()
+		s.noncesMu.RUnlock()
+		if s.policy.IsBanned(ip) || !s.policy.ApplyLimitPolicy(ip) || nonce == "" {
 			conn.Close()
 			continue
 		}
 		n += 1
-		cs := &Session{ conn: conn, ip: ip, Extranonce: s.GetExtraNonce() }
+		cs := &Session{ conn: conn, ip: ip, Extranonce: nonce }
 
 		accept <- n
 		go func(cs *Session) {
 			err = s.handleESClient(cs)
 			if err != nil {
+				s.noncesMu.RLock()
+				s.NoncePool.keepNonce(cs.Extranonce)
+				s.noncesMu.RUnlock()
 				s.removeSession(cs)
 				conn.Close()
 			}
@@ -285,17 +307,14 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 			log.Println("Malformed stratum request params from", cs.ip)
 			return err
 		}
-		
 		if len(params) != 2 {
 			log.Println("Malformed mining.subscribe request params from", cs.ip)
 			return cs.sendESError(req.Id, "Invalid params")
 		}
-
 		if params[1] != "EthereumStratum/1.0.0"{
 			log.Println("Unsupported stratum version from ", cs.ip)
 			return cs.sendESError(req.Id, "unsupported ethereum version")
 		}
-
 		resp := cs.getNotificationResponse(s, req.Id)
 		return cs.sendESResult(resp)
 
@@ -378,6 +397,9 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 			closeOnErr := func(err error) {
 				if err != nil {
 					// Close connection if there are any errors
+					s.noncesMu.RLock()
+					s.NoncePool.keepNonce(cs.Extranonce)
+					s.noncesMu.RUnlock()
 					cs.conn.Close()
 					s.removeSession(cs)
 				}

@@ -36,6 +36,9 @@ type ProxyServer struct {
 	// EthereumStratum jobs queue
 	jobsMu sync.RWMutex
 	Jobs *JobQueue
+	
+	noncesMu sync.RWMutex
+	NoncePool *NoncePool
 }
 
 type Session struct {
