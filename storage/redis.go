@@ -488,6 +488,7 @@ func (r *RedisClient) WritePayment(login, txHash string, amount int64) error {
 	_, err := tx.Exec(func() error {
 		tx.HIncrByFloat(r.formatKey("miners", login), "pending", float64(amount * -1))
 		tx.HIncrBy(r.formatKey("miners", login), "paid", amount)
+		tx.HSet(r.formatKey("miners", login), "lastPayment", strconv.FormatInt(ts, 10))
 		tx.HIncrBy(r.formatKey("finances"), "pending", (amount * -1))
 		tx.HIncrBy(r.formatKey("finances"), "paid", amount)
 		tx.ZAdd(r.formatKey("payments", "all"), redis.Z{Score: float64(ts), Member: join(txHash, login, amount)})
