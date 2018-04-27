@@ -93,13 +93,13 @@ func (p *NoncePool) Init(nonceSize int, prefixSpace []uint8) {
 		if len(prefixes) > 0 {
 			format := fmt.Sprintf("%%0%dx", (nonceSize - 1) * 2)
 			for i := range prefixes {
-				for j := 0; j < ranges[nonceSize - 2]; j++ {
+				for j := 0; j <= ranges[nonceSize - 2]; j++ {
 					nonces = append(nonces, prefixes[i] + fmt.Sprintf(format, j))
 				}
 			}
 		} else {
 			format := fmt.Sprintf("%%0%dx", nonceSize * 2)
-			for i := 0; i < ranges[nonceSize - 1]; i++ {
+			for i := 0; i <= ranges[nonceSize - 1]; i++ {
 				nonces = append(nonces, fmt.Sprintf(format, i))
 			}
 		}
@@ -114,14 +114,12 @@ func (p *NoncePool) Init(nonceSize int, prefixSpace []uint8) {
 		prefixes = make([]string, 1)
 		prefixes[0] = fmt.Sprintf("%02x", prefixSpace[0])
 	case 2:
-		prefixes = make([]string, int(prefixSpace[1] - prefixSpace[0]))
-		for i := range prefixes {
-			prefixes[i] = fmt.Sprintf("%02x", int(prefixSpace[0]) + i)
+		for i := int(prefixSpace[0]); i <= int(prefixSpace[1]); i++ {
+			prefixes = append(prefixes, fmt.Sprintf("%02x", i))
 		}
 	default:
-		prefixes = make([]string, 0)
 	}
-	
+
 	p.nonces = makeNonces(prefixes, nonceSize)
 }
 
