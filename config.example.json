@@ -98,6 +98,7 @@
 		"gas": "21000",
 		"gasPrice": "50000000000",
 		"autoGas": true,
+		"txLimiter": "2h",
 		"thresholdNormal": 500000000,
 		"normalFee": 0,
 		"thresholdInactive": 50000000,

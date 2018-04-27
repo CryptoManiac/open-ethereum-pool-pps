@@ -19,11 +19,16 @@ const txCheckInterval = 5 * time.Second
 
 type PayoutsConfig struct {
 	Enabled      bool   `json:"enabled"`
-	RequirePeers int64  `json:"requirePeers"`
 	Interval     string `json:"interval"`
+	TxLimiter    string `json:"txLimiter"`
+
+	// Daemon settings
 	Daemon       string `json:"daemon"`
+	RequirePeers int64  `json:"requirePeers"`
 	Timeout      string `json:"timeout"`
 	Address      string `json:"address"`
+
+	// Gas price settings
 	Gas          string `json:"gas"`
 	GasPrice     string `json:"gasPrice"`
 	AutoGas      bool   `json:"autoGas"`
@@ -50,6 +55,7 @@ type PayoutsProcessor struct {
 	config   *PayoutsConfig
 	backend  *storage.RedisClient
 	rpc      *rpc.RPCClient
+	txLimiter time.Duration
 	halt     bool
 	lastFail error
 }
@@ -73,6 +79,9 @@ func (u *PayoutsProcessor) Start() {
 	intv := util.MustParseDuration(u.config.Interval)
 	timer := time.NewTimer(intv)
 	log.Printf("Set payouts interval to %v", intv)
+	
+	u.txLimiter = util.MustParseDuration(u.config.TxLimiter)
+	log.Printf("Set payouts tx limiter to %v", u.txLimiter)
 
 	payments := u.backend.GetPendingPayments()
 	if len(payments) > 0 {
@@ -123,8 +132,10 @@ func (u *PayoutsProcessor) process() {
 	for _, login := range payees {
 		amount, _ := u.backend.GetBalance(login)
 		lastActivity, _ := u.backend.GetLastActivity(login)
+		lastPayment, _ := u.backend.GetLastPayment(login)
 		amountInShannon := big.NewInt(amount)
 		inactive := lastActivity.Before(time.Now().AddDate(0, 0, -7))
+		shouldpay := lastPayment.Before(time.Now().Add(- u.txLimiter))
 
 		if inactive {
 			amountInShannon.Sub(amountInShannon, big.NewInt(u.config.InactiveFee))
@@ -135,7 +146,7 @@ func (u *PayoutsProcessor) process() {
 		// Shannon^2 = Wei
 		amountInWei := new(big.Int).Mul(amountInShannon, util.Shannon)
 
-		if !u.reachedThreshold(amountInShannon, inactive) {
+		if !u.reachedThreshold(amountInShannon, inactive) || !shouldpay {
 			continue
 		}
 		mustPay++
