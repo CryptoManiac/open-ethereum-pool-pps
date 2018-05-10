@@ -17,7 +17,7 @@ type EthStratumReq struct  {
 
 type EthStratumResp struct  {
 	Id     interface{} `json:"id"`
-	Version string     `json:"jsonrpc"`
+	Version string     `json:"jsonrpc,omitempty"`
 	Result interface{} `json:"result"`
 	Error interface{}  `json:"error,omitempty"`
 }

@@ -221,7 +221,6 @@ func(cs *Session) getNotificationResponse(s *ProxyServer, id *json.RawMessage) E
 
 	resp := EthStratumResp{
 		Id:id,
-		Version:"2.0",
 		Result:result,
 		Error: nil,
 	}
