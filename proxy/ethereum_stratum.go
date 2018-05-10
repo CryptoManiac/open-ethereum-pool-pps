@@ -232,7 +232,7 @@ func(cs *Session) sendESError(id *json.RawMessage, message interface{}) error{
 	cs.Mutex.Lock()
 	defer cs.Mutex.Unlock()
 
-	resp := EthStratumResp{Id: id, Version: "2.0", Error: message}
+	resp := EthStratumResp{Id: id, Error: message}
 	return cs.enc.Encode(&resp)
 }
 
@@ -259,7 +259,6 @@ func(cs *Session) sendJob(s *ProxyServer, id *json.RawMessage) error {
 	s.jobsMu.RUnlock()
 
 	resp := EthStratumReq{
-		Version:"2.0",
 		Method:"mining.notify",
 		Params: []interface{}{
 			job.JobID,
@@ -313,7 +312,7 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 			})
 		}
 
-		resp := EthStratumResp{Version:"2.0",Id:req.Id, Result:reply, Error:nil}
+		resp := EthStratumResp{Id:req.Id, Result:reply, Error:nil}
 		if err := cs.sendESMessage(resp); err != nil{
 			return err
 		}
@@ -321,7 +320,7 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 		paramsDiff := []float64{
 			float64(s.config.Proxy.Difficulty) / 4294967296,
 		}
-		respReq := EthStratumReq{Version:"2.0",Method:"mining.set_difficulty", Params:paramsDiff}
+		respReq := EthStratumReq{Method:"mining.set_difficulty", Params:paramsDiff}
 		if err := cs.sendESMessage(respReq); err != nil {
 			return err
 		}
@@ -329,7 +328,7 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 		return cs.sendJob(s, req.Id)
 
 	case "mining.extranonce.subscribe":
-		resp := EthStratumResp{Id:req.Id, Version:"2.0", Result:true, Error:nil}
+		resp := EthStratumResp{Id:req.Id, Result:true, Error:nil}
 		if err := cs.sendESMessage(resp); err != nil{
 			return err
 		}
@@ -390,7 +389,6 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 
 			resp := cs.sendESMessage(EthStratumResp{
 				Id: req.Id,
-				Version:"2.0",
 				Result: reply,
 			})
 			closeOnErr(resp)
@@ -435,7 +433,6 @@ func (s *ProxyServer) broadcastNewESJobs() {
 		go func(cs *Session) {
 
 			resp := EthStratumReq{
-				Version:"2.0",
 				Method:"mining.notify",
 				Params: []interface{}{
 					job.JobID,
