@@ -214,18 +214,14 @@ func (s *ProxyServer) handleESClient(cs *Session) error {
 	return nil
 }
 
-func(cs *Session) getNotificationResponse(s *ProxyServer, id *json.RawMessage) JSONRpcResp {
+func(cs *Session) getNotificationResponse(s *ProxyServer, id *json.RawMessage) EthStratumResp {
 	result := make([]interface{}, 2)
-	param1 := make([]string, 3)
-	param1[0] = "mining.notify"
-	param1[1] = randstr.Hex(16)
-	param1[2] = "EthereumStratum/1.0.0"
-	result[0] = param1
+	result[0] = []string { "mining.notify", randstr.Hex(16), "EthereumStratum/1.0.0" }
 	result[1] = cs.Extranonce
 
-	resp := JSONRpcResp{
+	resp := EthStratumResp{
 		Id:id,
-		Version:"EthereumStratum/1.0.0",
+		Version:"2.0",
 		Result:result,
 		Error: nil,
 	}
@@ -237,17 +233,18 @@ func(cs *Session) sendESError(id *json.RawMessage, message interface{}) error{
 	cs.Mutex.Lock()
 	defer cs.Mutex.Unlock()
 
-	resp := JSONRpcResp{Id: id, Error: message}
+	resp := EthStratumResp{Id: id, Version: "2.0", Error: message}
 	return cs.enc.Encode(&resp)
 }
 
+/*
 func(cs *Session) sendESResult(resp JSONRpcResp)  error {
 	cs.Mutex.Lock()
 	defer cs.Mutex.Unlock()
 	return cs.enc.Encode(&resp)
-}
+}*/
 
-func(cs *Session) sendESReq(resp EthStratumReq)  error {
+func(cs *Session) sendESMessage(resp interface{})  error {
 	cs.Mutex.Lock()
 	defer cs.Mutex.Unlock()
 
@@ -263,6 +260,7 @@ func(cs *Session) sendJob(s *ProxyServer, id *json.RawMessage) error {
 	s.jobsMu.RUnlock()
 
 	resp := EthStratumReq{
+		Version:"2.0",
 		Method:"mining.notify",
 		Params: []interface{}{
 			job.JobID,
@@ -272,7 +270,7 @@ func(cs *Session) sendJob(s *ProxyServer, id *json.RawMessage) error {
 		},
 	}
 
-	return cs.sendESReq(resp)
+	return cs.sendESMessage(resp)
 }
 
 func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
@@ -297,7 +295,7 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 		}
 
 		resp := cs.getNotificationResponse(s, req.Id)
-		return cs.sendESResult(resp)
+		return cs.sendESMessage(resp)
 
 	case "mining.authorize":
 		var params []string
@@ -316,24 +314,24 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 			})
 		}
 
-		resp := JSONRpcResp{Id:req.Id, Result:reply, Error:nil}
-		if err := cs.sendESResult(resp); err != nil{
+		resp := EthStratumResp{Version:"2.0",Id:req.Id, Result:reply, Error:nil}
+		if err := cs.sendESMessage(resp); err != nil{
 			return err
 		}
 
 		paramsDiff := []float64{
 			float64(s.config.Proxy.Difficulty) / 4294967296,
 		}
-		respReq := EthStratumReq{Method:"mining.set_difficulty", Params:paramsDiff}
-		if err := cs.sendESReq(respReq); err != nil {
+		respReq := EthStratumReq{Version:"2.0",Method:"mining.set_difficulty", Params:paramsDiff}
+		if err := cs.sendESMessage(respReq); err != nil {
 			return err
 		}
 
 		return cs.sendJob(s, req.Id)
 
 	case "mining.extranonce.subscribe":
-		resp := JSONRpcResp{Id:req.Id, Result:true, Error:nil}
-		if err := cs.sendESResult(resp); err != nil{
+		resp := EthStratumResp{Id:req.Id, Version:"2.0", Result:true, Error:nil}
+		if err := cs.sendESMessage(resp); err != nil{
 			return err
 		}
 
@@ -391,8 +389,9 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 				return
 			}
 
-			resp := cs.sendESResult(JSONRpcResp{
+			resp := cs.sendESMessage(EthStratumResp{
 				Id: req.Id,
+				Version:"2.0",
 				Result: reply,
 			})
 			closeOnErr(resp)
@@ -437,6 +436,7 @@ func (s *ProxyServer) broadcastNewESJobs() {
 		go func(cs *Session) {
 
 			resp := EthStratumReq{
+				Version:"2.0",
 				Method:"mining.notify",
 				Params: []interface{}{
 					job.JobID,
@@ -446,7 +446,7 @@ func (s *ProxyServer) broadcastNewESJobs() {
 				},
 			}
 
-			err := cs.sendESReq(resp)
+			err := cs.sendESMessage(resp)
 			<-bcast
 			if err != nil {
 				log.Printf("Job transmit error to %v@%v: %v", cs.login, cs.ip, err)
