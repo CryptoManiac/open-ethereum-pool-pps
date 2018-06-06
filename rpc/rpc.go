@@ -164,6 +164,19 @@ func (r *RPCClient) GetBalance(address string) (*big.Int, error) {
 	return util.String2Big(reply), err
 }
 
+func (r *RPCClient) IsContract(address string) (bool, error) {
+	rpcResp, err := r.doPost(r.Url, "eth_getCode", []string{address, "latest"})
+	if err != nil {
+		return false, err
+	}
+	var reply string
+	err = json.Unmarshal(*rpcResp.Result, &reply)
+	if err != nil {
+		return false, err
+	}
+	return reply != "0x", err
+}
+
 func (r *RPCClient) Sign(from string, s string) (string, error) {
 	hash := sha256.Sum256([]byte(s))
 	rpcResp, err := r.doPost(r.Url, "eth_sign", []string{from, common.ToHex(hash[:])})

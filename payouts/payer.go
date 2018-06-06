@@ -34,6 +34,8 @@ type PayoutsConfig struct {
 	AutoGas      bool   `json:"autoGas"`
 
 	// In Shannon
+	ContractThreshold int64 `json:"thresholdContract"`
+	ContractFee int64 `json:"contractFee"`
 	NormalThreshold int64 `json:"thresholdNormal"`
 	NormalFee int64 `json:"normalFee"`
 	InactiveThreshold int64 `json:"thresholdInactive"`
@@ -131,22 +133,31 @@ func (u *PayoutsProcessor) process() {
 
 	for _, login := range payees {
 		amount, _ := u.backend.GetBalance(login)
+		isContract, _ := u.rpc.IsContract(login)
 		lastActivity, _ := u.backend.GetLastActivity(login)
 		lastPayment, _ := u.backend.GetLastPayment(login)
 		amountInShannon := big.NewInt(amount)
+		payFee := u.config.NormalFee
+		payThreshold := u.config.NormalThreshold
+
 		inactive := lastActivity.Before(time.Now().AddDate(0, 0, -7))
 		shouldpay := lastPayment.Before(time.Now().Add(- u.txLimiter))
 
 		if inactive {
-			amountInShannon.Sub(amountInShannon, big.NewInt(u.config.InactiveFee))
-		} else {
-			amountInShannon.Sub(amountInShannon, big.NewInt(u.config.NormalFee))
+			payFee = u.config.InactiveFee
+			payThreshold = u.config.InactiveThreshold
 		}
+		if isContract {
+			payFee = u.config.ContractFee
+			payThreshold = u.config.ContractThreshold
+		}
+
+		amountInShannon.Sub(amountInShannon, big.NewInt(payFee))
 
 		// Shannon^2 = Wei
 		amountInWei := new(big.Int).Mul(amountInShannon, util.Shannon)
 
-		if !u.reachedThreshold(amountInShannon, inactive) || !shouldpay {
+		if !u.reachedThreshold(amountInShannon, payThreshold, payFee) || !shouldpay {
 			continue
 		}
 		mustPay++
@@ -268,13 +279,9 @@ func (self PayoutsProcessor) checkPeers() bool {
 	return true
 }
 
-func (self PayoutsProcessor) reachedThreshold(amount *big.Int, inactive bool) bool {
-	threshold := big.NewInt(self.config.NormalThreshold)
-	fee := big.NewInt(self.config.NormalFee)
-	if inactive {
-		threshold = big.NewInt(self.config.InactiveThreshold)
-		fee = big.NewInt(self.config.InactiveFee)
-	}
+func (self PayoutsProcessor) reachedThreshold(amount *big.Int, payThreshold, payFee int64) bool {
+	threshold := big.NewInt(payThreshold)
+	fee := big.NewInt(payFee)
 	return ( threshold.Cmp(amount) < 0 ) && ( fee.Cmp(amount) < 0 )
 }
 
