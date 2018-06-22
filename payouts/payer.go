@@ -180,10 +180,8 @@ func (u *PayoutsProcessor) process() {
 			break
 		}
 		if poolBalance.Cmp(amountInWei) < 0 {
-			err := fmt.Errorf("Not enough balance for payment, need %s Wei, pool has %s Wei",
+			log.Printf("Not enough balance for payment, need %s Wei, pool has %s Wei",
 				amountInWei.String(), poolBalance.String())
-			u.halt = true
-			u.lastFail = err
 			break
 		}
 
