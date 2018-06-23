@@ -290,6 +290,8 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 			return cs.sendESError(req.Id, "unsupported ethereum version")
 		}
 
+		log.Printf("Proceeding stratum subscription for %v with user agent %v", cs.ip, params[0])
+
 		resp := cs.getNotificationResponse(s, req.Id)
 		return cs.sendESMessage(resp)
 
