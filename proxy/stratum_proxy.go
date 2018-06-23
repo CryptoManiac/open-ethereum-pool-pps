@@ -48,7 +48,7 @@ func (s *ProxyServer) ListenSP() {
 			continue
 		}
 		n += 1
-		cs := &Session{conn: conn, ip: ip}
+		cs := &Session{conn: conn, ip: ip, Difficulty: s.config.Proxy.Difficulty}
 
 		accept <- n
 		go func(cs *Session) {
@@ -142,7 +142,7 @@ func (cs *Session) handleSPMessage(s *ProxyServer, req *StratumReq) error {
 			}
 			closeOnErr(cs.sendSPResult(req.Id, &reply))
 		}
-		go s.handleTCPSubmitRPC(cs, req.Worker, params, callback)
+		go s.handleTCPSubmitRPC(cs, req.Worker, params, cs.Difficulty, callback)
 		return nil
 	case "eth_submitHashrate":
 		return cs.sendSPResult(req.Id, true)
@@ -191,6 +191,15 @@ func (s *ProxyServer) registerSession(cs *Session) {
 }
 
 func (s *ProxyServer) removeSession(cs *Session) {
+	if cs.Extranonce != "" {
+		s.workMu.Lock()
+		defer s.workMu.Unlock()
+		_, ok := s.workDiff[cs.Extranonce]
+		if ok {
+			s.workDiff[cs.Extranonce].ToRemove = true
+		}
+	}
+
 	s.sessionsMu.Lock()
 	defer s.sessionsMu.Unlock()
 	delete(s.sessions, cs)

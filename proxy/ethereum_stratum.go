@@ -7,7 +7,9 @@ import (
 	"bufio"
 	"io"
 	"fmt"
+	"strconv"
 	"time"
+	"math"
 	"math/rand"
 
 	"github.com/thanhpk/randstr"
@@ -17,13 +19,13 @@ import (
 
 // EthereumStratum job
 type JobData struct {
-	JobID string
+	JobId uint64
 	SeedHash string
 	HeaderHash string
 }
 
 type JobQueue struct {
-	topId int
+	topId uint64
 	items []JobData
 }
 
@@ -33,11 +35,13 @@ func (jq *JobQueue) Init() {
 		for i := 0; i < MaxBacklog; i++ {
 			jq.items = append(jq.items, JobData{})
 		}
-		jq.topId = 1
+		jq.topId = 0
 	}
 }
 
-func (jq *JobQueue) JobEnqueue(seedHash, headerHash string, job *JobData) {
+func (jq *JobQueue) JobEnqueue(tmpl *BlockTemplate, job *JobData) {
+	seedHash, headerHash := tmpl.Seed, tmpl.Header
+
 	if (seedHash[0:2] == "0x") {
 		seedHash = seedHash[2:]
 	}
@@ -45,10 +49,11 @@ func (jq *JobQueue) JobEnqueue(seedHash, headerHash string, job *JobData) {
 		headerHash = headerHash[2:]
 	}
 
-	jq.topId += 1;
+	// Convert first 8 bytes of header hash to job ID
+	jq.topId, _ = strconv.ParseUint(headerHash[:16], 16, 64)
 
 	*job = JobData{
-		JobID: fmt.Sprintf("%x", jq.topId),
+		JobId: jq.topId,
 		SeedHash: seedHash,
 		HeaderHash: headerHash,
 	}
@@ -58,9 +63,9 @@ func (jq *JobQueue) JobEnqueue(seedHash, headerHash string, job *JobData) {
 	jq.items = append(jq.items, *job)
 }
 
-func (jq *JobQueue) FindJob(JobID string, job *JobData) bool {
+func (jq *JobQueue) FindJob(JobId uint64, job *JobData) bool {
 	for _, v := range jq.items {
-		if v.JobID == JobID {
+		if v.JobId == JobId {
 			*job = v
 			return true
 		}
@@ -71,7 +76,7 @@ func (jq *JobQueue) FindJob(JobID string, job *JobData) bool {
 func (jq *JobQueue) GetTopJob(job *JobData) bool {
 	if len(jq.items) > 0 {
 		*job = jq.items[len(jq.items) - 1]
-		return job.JobID == fmt.Sprintf("%x", jq.topId)
+		return job.JobId == jq.topId
 	}
 	
 	return false
@@ -98,17 +103,12 @@ func (s *ProxyServer) makePrefix() string {
 func (s *ProxyServer) GetExtraNonce() string {
 	var extraNonce string
 
-	nonceSize := s.config.Proxy.Stratum.NonceSize
-	if nonceSize < 2 {
-		nonceSize = 2
-	}
-
 	s.sessionsMu.RLock()
 	defer s.sessionsMu.RUnlock()
 
 	for {
 		prefix := s.makePrefix()
-		extraNonce = prefix + randstr.Hex(nonceSize - len(prefix) / 2)
+		extraNonce = prefix + randstr.Hex(s.nonceSize - len(prefix) / 2)
 		found := false
 
 		for m, _ := range s.sessions {
@@ -122,7 +122,7 @@ func (s *ProxyServer) GetExtraNonce() string {
 			break
 		}
 	}
-
+	
 	return extraNonce
 }
 
@@ -162,7 +162,12 @@ func (s *ProxyServer) ListenES(){
 			continue
 		}
 		n += 1
-		cs := &Session{ conn: conn, ip: ip, Extranonce: s.GetExtraNonce() }
+		cs := &Session{ conn: conn, ip: ip, Extranonce: s.GetExtraNonce(), Difficulty: s.config.Proxy.Difficulty }
+
+		// Remember difficulty
+		s.workMu.RLock()
+		s.workDiff[cs.Extranonce] = &WorkDiff{Difficulty:cs.Difficulty, ToRemove: false}
+		s.workMu.RUnlock()
 
 		accept <- n
 		go func(cs *Session) {
@@ -236,13 +241,6 @@ func(cs *Session) sendESError(id *json.RawMessage, message interface{}) error{
 	return cs.enc.Encode(&resp)
 }
 
-/*
-func(cs *Session) sendESResult(resp JSONRpcResp)  error {
-	cs.Mutex.Lock()
-	defer cs.Mutex.Unlock()
-	return cs.enc.Encode(&resp)
-}*/
-
 func(cs *Session) sendESMessage(resp interface{})  error {
 	cs.Mutex.Lock()
 	defer cs.Mutex.Unlock()
@@ -261,7 +259,7 @@ func(cs *Session) sendJob(s *ProxyServer, id *json.RawMessage) error {
 	resp := EthStratumReq{
 		Method:"mining.notify",
 		Params: []interface{}{
-			job.JobID,
+			cs.Extranonce + fmt.Sprintf("%x", job.JobId),
 			job.SeedHash,
 			job.HeaderHash,
 			true,
@@ -317,10 +315,20 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 			return err
 		}
 
-		paramsDiff := []float64{
-			float64(s.config.Proxy.Difficulty) / 4294967296,
+		floatDiff := float64(cs.Difficulty) / 4294967296.0
+		if len(params) > 1 {
+			userDiff, err2 := strconv.ParseFloat(params[1], 64)
+			if err2 == nil && userDiff >= s.minDiffFloat {
+				userDiff = math.Floor(userDiff * 100) / 100
+				cs.Difficulty = int64(math.Ceil(userDiff * 4294967296.0))
+				s.workMu.RLock()
+				s.workDiff[cs.Extranonce] = &WorkDiff{Difficulty: cs.Difficulty, ToRemove: false}
+				s.workMu.RUnlock()
+				floatDiff = math.Floor(userDiff * 100) / 100
+			}
 		}
-		respReq := EthStratumReq{Method:"mining.set_difficulty", Params:paramsDiff}
+
+		respReq := EthStratumReq{Method:"mining.set_difficulty", Params: []float64{ floatDiff }}
 		if err := cs.sendESMessage(respReq); err != nil {
 			return err
 		}
@@ -351,15 +359,26 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 		if len(splitData) > 1 {
 			id = splitData[1]
 		}
+		
+		jobNonce := params[1][:s.nonceSize * 2]
+		JobId, _ := strconv.ParseUint(params[1][s.nonceSize * 2:], 16, 64)
+
+		s.workMu.RLock()
+		jobDiff := cs.Difficulty
+		rec, fine := s.workDiff[jobNonce]
+		if fine {
+			jobDiff = rec.Difficulty
+		}
+		s.workMu.RUnlock()
 
 		var job JobData
-		if !s.Jobs.FindJob(params[1], &job) {
-			log.Printf("Unknown job %v from %v@%v", params[1], cs.login, cs.ip)
+		if !s.Jobs.FindJob(JobId, &job) {
+			log.Printf("Unknown job %v from %v@%v", JobId, cs.login, cs.ip)
 			return cs.sendESError(req.Id, "unknown job id")
 		}
 
 		params = []string{
-			cs.Extranonce + params[2],
+			jobNonce + params[2],
 			job.HeaderHash,
 			"0000000000000000000000000000000000000000000000000000000000000000",
 		}
@@ -393,7 +412,7 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 			})
 			closeOnErr(resp)
 		}
-		go s.handleTCPSubmitRPC(cs, id, params, callback)
+		go s.handleTCPSubmitRPC(cs, id, params, jobDiff, callback)
 		return nil
 
 	default:
@@ -416,11 +435,11 @@ func (s *ProxyServer) broadcastNewESJobs() {
 
 	s.jobsMu.RLock()
 	job := JobData{}
-	s.Jobs.JobEnqueue(t.Seed, t.Header, &job)
+	s.Jobs.JobEnqueue(t, &job)
 	s.jobsMu.RUnlock()
 
 	count := len(s.sessions)
-	log.Printf("Broadcasting new job %s to %v ethereum stratum miners", job.JobID, count)
+	log.Printf("Broadcasting new job %v to %v ethereum stratum miners", job.JobId, count)
 
 	start := time.Now()
 	bcast := make(chan int, 1024)
@@ -435,7 +454,7 @@ func (s *ProxyServer) broadcastNewESJobs() {
 			resp := EthStratumReq{
 				Method:"mining.notify",
 				Params: []interface{}{
-					job.JobID,
+					cs.Extranonce + fmt.Sprintf("%x", job.JobId),
 					job.SeedHash,
 					job.HeaderHash,
 					true,

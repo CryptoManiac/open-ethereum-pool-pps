@@ -17,6 +17,11 @@ import (
 	"github.com/CryptoManiac/open-ethereum-pool/util"
 )
 
+type WorkDiff struct {
+	Difficulty int64
+	ToRemove   bool
+}
+
 type ProxyServer struct {
 	config             *Config
 	blockTemplate      atomic.Value
@@ -32,10 +37,14 @@ type ProxyServer struct {
 	sessionsMu sync.RWMutex
 	sessions   map[*Session]struct{}
 	timeout    time.Duration
+	nonceSize  int
 
 	// EthereumStratum jobs queue
 	jobsMu sync.RWMutex
 	Jobs *JobQueue
+	workMu sync.RWMutex
+	workDiff map[string]*WorkDiff
+	minDiffFloat float64
 }
 
 type Session struct {
@@ -46,8 +55,9 @@ type Session struct {
 	conn  *net.TCPConn
 	login string
 
-	// EthereumStratum extranonce
+	// EthereumStratum extranonce and current difficulty
 	Extranonce string
+	Difficulty int64
 }
 
 func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
@@ -59,6 +69,16 @@ func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
 
 	proxy := &ProxyServer{config: cfg, backend: backend, policy: policy}
 	proxy.diff = util.GetTargetHex(cfg.Proxy.Difficulty)
+	proxy.workDiff = make(map[string]*WorkDiff)
+	proxy.minDiffFloat = cfg.Proxy.Stratum.MinDiffFloat
+	log.Printf("Set minimum float difficulty to %v", proxy.minDiffFloat)
+
+	nonceSize := cfg.Proxy.Stratum.NonceSize
+	if nonceSize < 2 {
+		nonceSize = 2
+	}
+	proxy.nonceSize = nonceSize
+	log.Printf("Set nonce size to %v", proxy.nonceSize)
 
 	proxy.upstreams = make([]*rpc.RPCClient, len(cfg.Upstream))
 	for i, v := range cfg.Upstream {
@@ -90,11 +110,30 @@ func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
 	refreshTimer := time.NewTimer(refreshIntv)
 	log.Printf("Set block refresh every %v", refreshIntv)
 
+	cleanIntv := util.MustParseDuration(cfg.Proxy.CleanInterval)
+	cleanTimer := time.NewTimer(cleanIntv)
+
 	checkIntv := util.MustParseDuration(cfg.UpstreamCheckInterval)
 	checkTimer := time.NewTimer(checkIntv)
 
 	stateUpdateIntv := util.MustParseDuration(cfg.Proxy.StateUpdateInterval)
 	stateUpdateTimer := time.NewTimer(stateUpdateIntv)
+
+	go func() {
+		for {
+			select {
+			case <-cleanTimer.C:
+				proxy.workMu.RLock()
+				for k, v := range proxy.workDiff {
+					if v.ToRemove {
+						delete(proxy.workDiff, k)
+					}
+				}
+				proxy.workMu.RUnlock()
+				cleanTimer.Reset(refreshIntv)
+			}
+		}
+	}()
 
 	go func() {
 		for {

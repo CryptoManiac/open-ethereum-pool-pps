@@ -47,7 +47,7 @@ func (s *ProxyServer) handleGetWorkRPC(cs *Session) ([]string, *ErrorReply) {
 
 // Stratum
 type submitCB func(bool, *ErrorReply)
-func (s *ProxyServer) handleTCPSubmitRPC(cs *Session, id string, params []string, callback submitCB) {
+func (s *ProxyServer) handleTCPSubmitRPC(cs *Session, id string, params []string, shareDiff int64, callback submitCB) {
 	result, err := false, &ErrorReply{Code: 25, Message: "Not subscribed"}
 
 	s.sessionsMu.RLock()
@@ -55,13 +55,13 @@ func (s *ProxyServer) handleTCPSubmitRPC(cs *Session, id string, params []string
 	s.sessionsMu.RUnlock()
 	
 	if ok {
-		result, err = s.handleSubmitRPC(cs, cs.login, id, params)
+		result, err = s.handleSubmitRPC(cs, cs.login, id, params, shareDiff)
 	}
 
 	callback(result, err)
 }
 
-func (s *ProxyServer) handleSubmitRPC(cs *Session, login, id string, params []string) (bool, *ErrorReply) {
+func (s *ProxyServer) handleSubmitRPC(cs *Session, login, id string, params []string, shareDiff int64) (bool, *ErrorReply) {
 	if !workerPattern.MatchString(id) {
 		id = "0"
 	}
@@ -77,7 +77,7 @@ func (s *ProxyServer) handleSubmitRPC(cs *Session, login, id string, params []st
 		return false, &ErrorReply{Code: -1, Message: "Malformed PoW result"}
 	}
 	t := s.currentBlockTemplate()
-	exist, validShare, params := s.processShare(login, id, cs.ip, t, params)
+	exist, validShare, params := s.processShare(login, id, cs.ip, t, shareDiff, params)
 	ok := s.policy.ApplySharePolicy(cs.ip, !exist && validShare)
 
 	if exist {

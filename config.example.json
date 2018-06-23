@@ -11,6 +11,7 @@
 		"behindReverseProxy": false,
 		"blockRefreshInterval": "1s",
 		"stateUpdateInterval": "3s",
+		"cleanInterval": "60s",
 		"difficulty": 2000000000,
 		"miningFee": 1.5,
 		"potA": 0.8,
@@ -26,6 +27,7 @@
 			"protocol": "EthereumStratum",
 			"xnSpace": [0, 255],
 			"xnSize": 2,
+			"minDiffFloat": 0.4,
 			"timeout": "120s",
 			"maxConn": 8192
 		},

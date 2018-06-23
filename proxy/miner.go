@@ -12,9 +12,8 @@ import (
 
 var hasher = ethash.New()
 
-func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, data []string) (bool, bool, []string) {
+func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, shareDiff int64, data []string) (bool, bool, []string) {
 	nonce, _ := strconv.ParseUint(strings.Replace(data[0], "0x", "", -1), 16, 64)
-	shareDiff := s.config.Proxy.Difficulty
 	shareFee := s.config.Proxy.MiningFee
 	potA := s.config.Proxy.PoT_A
 	potCap := s.config.Proxy.PoT_Cap
@@ -35,6 +34,10 @@ func (s *ProxyServer) processShare(login, id, ip string, t *BlockTemplate, data 
 
 	// Verify validity against block and share target
 	isShare, isBlock, actualDiff, mixHash := hasher.VerifyShare(share, big.NewInt(shareDiff))
+	if !isShare {
+		log.Printf("Actual: %v, Nominal: %v", actualDiff, shareDiff)
+		log.Printf("Nonce: %v", data[0])
+	}
 
 	// Replace provided mixDigest with calculated one
 	data[2] = mixHash.Hex()
