@@ -259,7 +259,7 @@ func(cs *Session) sendJob(s *ProxyServer, id *json.RawMessage) error {
 	resp := EthStratumReq{
 		Method:"mining.notify",
 		Params: []interface{}{
-			cs.Extranonce + fmt.Sprintf("%x", job.JobId),
+			cs.Extranonce + fmt.Sprintf("%016x", job.JobId),
 			job.SeedHash,
 			job.HeaderHash,
 			true,
@@ -351,8 +351,9 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 			return err
 		}
 		
-		if len(params) != 3 {
+		if len(params) != 3 || len(params[1]) != s.nonceSize * 2 + 16 {
 			log.Println("Malformed mining.submit request params from", cs.ip)
+			log.Printf("Params: %v", params)
 			return cs.sendESError(req.Id, "Invalid params")
 		}
 		
@@ -456,7 +457,7 @@ func (s *ProxyServer) broadcastNewESJobs() {
 			resp := EthStratumReq{
 				Method:"mining.notify",
 				Params: []interface{}{
-					cs.Extranonce + fmt.Sprintf("%x", job.JobId),
+					cs.Extranonce + fmt.Sprintf("%016x", job.JobId),
 					job.SeedHash,
 					job.HeaderHash,
 					true,
