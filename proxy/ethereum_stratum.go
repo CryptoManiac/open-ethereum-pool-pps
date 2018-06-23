@@ -318,7 +318,7 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 		floatDiff := float64(cs.Difficulty) / 4294967296.0
 		if len(params) > 1 {
 			userDiff, err2 := strconv.ParseFloat(params[1], 64)
-			if err2 == nil && userDiff >= s.minDiffFloat {
+			if err2 == nil && userDiff >= s.minDiffFloat && userDiff <= s.maxDiffFloat {
 				userDiff = math.Floor(userDiff * 100) / 100
 				cs.Difficulty = int64(math.Ceil(userDiff * 4294967296.0))
 				s.workMu.RLock()

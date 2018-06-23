@@ -45,6 +45,7 @@ type ProxyServer struct {
 	workMu sync.RWMutex
 	workDiff map[string]*WorkDiff
 	minDiffFloat float64
+	maxDiffFloat float64
 }
 
 type Session struct {
@@ -71,7 +72,9 @@ func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
 	proxy.diff = util.GetTargetHex(cfg.Proxy.Difficulty)
 	proxy.workDiff = make(map[string]*WorkDiff)
 	proxy.minDiffFloat = cfg.Proxy.Stratum.MinDiffFloat
+	proxy.maxDiffFloat = cfg.Proxy.Stratum.MaxDiffFloat
 	log.Printf("Set minimum float difficulty to %v", proxy.minDiffFloat)
+	log.Printf("Set maximum float difficulty to %v", proxy.maxDiffFloat)
 
 	nonceSize := cfg.Proxy.Stratum.NonceSize
 	if nonceSize < 2 {

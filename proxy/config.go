@@ -50,6 +50,7 @@ type StratumEndpoint struct {
 	Protocol string `json:"protocol"`
 	NonceSpace []uint8 `json:"xnSpace"`
 	MinDiffFloat float64 `json:"minDiffFloat"`
+	MaxDiffFloat float64 `json:"maxDiffFloat"`
 	NonceSize int `json:"xnSize"`
 	Timeout string `json:"timeout"`
 	MaxConn int    `json:"maxConn"`
