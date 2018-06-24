@@ -56,9 +56,11 @@ type Session struct {
 	conn  *net.TCPConn
 	login string
 
-	// EthereumStratum extranonce and current difficulty
+	// EthereumStratum extranonce, current difficulty
+	//   and mining.extranonce.subscribe status
 	Extranonce string
 	Difficulty int64
+	exnSub     bool
 }
 
 func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
@@ -72,6 +74,11 @@ func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
 	proxy.diff = util.GetTargetHex(cfg.Proxy.Difficulty)
 	proxy.workDiff = make(map[string]*WorkDiff)
 	proxy.minDiffFloat = cfg.Proxy.Stratum.MinDiffFloat
+	
+	if proxy.minDiffFloat < 0.1 && cfg.Proxy.Stratum.Protocol == "EthereumStratum" {
+		log.Fatal("For EthereumStratum protocol type, the minimum float difficulty must be set to at least 0.1")
+	}
+	
 	proxy.maxDiffFloat = cfg.Proxy.Stratum.MaxDiffFloat
 	log.Printf("Set minimum float difficulty to %v", proxy.minDiffFloat)
 	log.Printf("Set maximum float difficulty to %v", proxy.maxDiffFloat)

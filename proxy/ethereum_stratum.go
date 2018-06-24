@@ -338,6 +338,8 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 		return cs.sendJob(s, req.Id)
 
 	case "mining.extranonce.subscribe":
+		// Client does provide support for extranonce subscription
+		cs.exnSub = true
 		resp := EthStratumResp{Id:req.Id, Result:true, Error:nil}
 		if err := cs.sendESMessage(resp); err != nil{
 			return err
@@ -350,34 +352,45 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 		if err := json.Unmarshal(*req.Params, &params); err != nil{
 			return err
 		}
-		
-		if len(params) != 3 || len(params[1]) != s.nonceSize * 2 + 16 {
-			log.Println("Malformed mining.submit request params from", cs.ip)
-			log.Printf("Params: %v", params)
+
+		if len(params) != 3 {
+			log.Printf("Malformed mining.submit request params from %v : %v", cs.ip, params)
 			return cs.sendESError(req.Id, "Invalid params")
 		}
-		
+
+		if len(params[1]) != s.nonceSize * 2 + 16 {
+			log.Printf("Malformed job id sent from from %v : %v characters long instead while expected length is %v characters", cs.ip, len(params[1]), s.nonceSize * 2 + 16)
+			return cs.sendESError(req.Id, "Incorrect job id")
+		}
+
 		splitData := strings.Split(params[0], ".")
 		id := "0"
 		if len(splitData) > 1 {
 			id = splitData[1]
 		}
-		
-		jobNonce := params[1][:s.nonceSize * 2]
-		JobId, _ := strconv.ParseUint(params[1][s.nonceSize * 2:], 16, 64)
-
-		s.workMu.RLock()
-		jobDiff := cs.Difficulty
-		rec, fine := s.workDiff[jobNonce]
-		if fine {
-			jobDiff = rec.Difficulty
-		}
-		s.workMu.RUnlock()
 
 		var job JobData
-		if !s.Jobs.FindJob(JobId, &job) {
-			log.Printf("Unknown job %v from %v@%v", JobId, cs.login, cs.ip)
-			return cs.sendESError(req.Id, "unknown job id")
+		var jobId uint64
+		var jobDiff int64
+		var jobNonce string
+
+		jobNonce = params[1][:s.nonceSize * 2]
+		jobId, _ = strconv.ParseUint(params[1][s.nonceSize * 2:], 16, 64)
+
+		s.workMu.RLock()
+		exnRec, isFine := s.workDiff[jobNonce]
+		s.workMu.RUnlock()
+
+		if !isFine {
+			log.Printf("No extranonce diff record for job %v sent from %v", jobId, cs.ip)
+			return cs.sendESError(req.Id, "No extranonce for this job")
+		}
+
+		jobDiff = exnRec.Difficulty
+
+		if !s.Jobs.FindJob(jobId, &job) {
+			log.Printf("Unknown job %v from %v@%v", jobId, cs.login, cs.ip)
+			return cs.sendESError(req.Id, "Unknown job id")
 		}
 
 		params = []string{
@@ -385,7 +398,7 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 			job.HeaderHash,
 			"0000000000000000000000000000000000000000000000000000000000000000",
 		}
-		
+
 		for k, v := range params {
 			if v[0:2] != "0x" {
 				params[k] = "0x" + v
