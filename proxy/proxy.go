@@ -19,7 +19,8 @@ import (
 
 type WorkDiff struct {
 	Difficulty int64
-	ToRemove   bool
+	PassDel bool
+	IsDel   bool
 }
 
 type ProxyServer struct {
@@ -133,13 +134,15 @@ func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
 		for {
 			select {
 			case <-cleanTimer.C:
-				proxy.workMu.RLock()
+				proxy.workMu.Lock()
 				for k, v := range proxy.workDiff {
-					if v.ToRemove {
+					if v.IsDel && !v.PassDel {
 						delete(proxy.workDiff, k)
+					} else if v.IsDel {
+						proxy.workDiff[k].PassDel = false
 					}
 				}
-				proxy.workMu.RUnlock()
+				proxy.workMu.Unlock()
 				cleanTimer.Reset(refreshIntv)
 			}
 		}

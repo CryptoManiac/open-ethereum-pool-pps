@@ -165,9 +165,9 @@ func (s *ProxyServer) ListenES(){
 		cs := &Session{ conn: conn, ip: ip, Extranonce: s.GetExtraNonce(), Difficulty: s.config.Proxy.Difficulty }
 
 		// Remember difficulty
-		s.workMu.RLock()
-		s.workDiff[cs.Extranonce] = &WorkDiff{Difficulty:cs.Difficulty, ToRemove: false}
-		s.workMu.RUnlock()
+		s.workMu.Lock()
+		s.workDiff[cs.Extranonce] = &WorkDiff{Difficulty:cs.Difficulty, IsDel: false, PassDel: true}
+		s.workMu.Unlock()
 
 		accept <- n
 		go func(cs *Session) {
@@ -323,9 +323,9 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 			if err2 == nil && userDiff >= s.minDiffFloat && userDiff <= s.maxDiffFloat {
 				userDiff = math.Floor(userDiff * 100) / 100
 				cs.Difficulty = int64(math.Ceil(userDiff * 4294967296.0))
-				s.workMu.RLock()
-				s.workDiff[cs.Extranonce] = &WorkDiff{Difficulty: cs.Difficulty, ToRemove: false}
-				s.workMu.RUnlock()
+				s.workMu.Lock()
+				s.workDiff[cs.Extranonce] = &WorkDiff{Difficulty: cs.Difficulty, IsDel: false, PassDel: true}
+				s.workMu.Unlock()
 				floatDiff = math.Floor(userDiff * 100) / 100
 			}
 		}
@@ -360,7 +360,7 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 
 		if len(params[1]) != s.nonceSize * 2 + 16 {
 			log.Printf("Malformed job id sent from from %v : %v characters long instead while expected length is %v characters", cs.ip, len(params[1]), s.nonceSize * 2 + 16)
-			return cs.sendESError(req.Id, "Incorrect job id")
+			return cs.sendESError(req.Id, "Incorrect job id length")
 		}
 
 		splitData := strings.Split(params[0], ".")
@@ -370,12 +370,14 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 		}
 
 		var job JobData
-		var jobId uint64
-		var jobDiff int64
-		var jobNonce string
+		
+		jobNonce := params[1][:s.nonceSize * 2]
+		jobId, err1 := strconv.ParseUint(params[1][s.nonceSize * 2:], 16, 64)
 
-		jobNonce = params[1][:s.nonceSize * 2]
-		jobId, _ = strconv.ParseUint(params[1][s.nonceSize * 2:], 16, 64)
+		if err1 != nil {
+			log.Printf("Incorrect job id %v sent from %v", jobId, cs.ip)
+			return cs.sendESError(req.Id, "Incorrect job id format")
+		}
 
 		s.workMu.RLock()
 		exnRec, isFine := s.workDiff[jobNonce]
@@ -386,7 +388,7 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 			return cs.sendESError(req.Id, "No extranonce for this job")
 		}
 
-		jobDiff = exnRec.Difficulty
+		jobDiff, jobIsDel, jobPassDel := exnRec.Difficulty, exnRec.IsDel, exnRec.PassDel
 
 		if !s.Jobs.FindJob(jobId, &job) {
 			log.Printf("Unknown job %v from %v@%v", jobId, cs.login, cs.ip)
@@ -405,7 +407,15 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 			}
 		}
 
-		callback := func(reply bool, errReply *ErrorReply) {
+		callback := func(result bool, errReply *ErrorReply) {
+			if result && jobIsDel && !jobPassDel {
+				// Allow record to survive when the next cleaning happens
+				s.workMu.Lock()
+				_, isFine = s.workDiff[jobNonce]
+				s.workDiff[jobNonce].PassDel = true
+				s.workMu.Unlock()
+			}
+
 			closeOnErr := func(err error) {
 				if err != nil {
 					// Close connection if there are any errors
@@ -424,7 +434,7 @@ func (cs *Session) handleESMessage(s *ProxyServer, req *StratumReq) error {
 
 			resp := cs.sendESMessage(EthStratumResp{
 				Id: req.Id,
-				Result: reply,
+				Result: result,
 			})
 			closeOnErr(resp)
 		}
@@ -449,10 +459,10 @@ func (s *ProxyServer) broadcastNewESJobs() {
 	s.sessionsMu.RLock()
 	defer s.sessionsMu.RUnlock()
 
-	s.jobsMu.RLock()
+	s.jobsMu.Lock()
 	job := JobData{}
 	s.Jobs.JobEnqueue(t, &job)
-	s.jobsMu.RUnlock()
+	s.jobsMu.Unlock()
 
 	count := len(s.sessions)
 	log.Printf("Broadcasting new job %v to %v ethereum stratum miners", job.JobId, count)

@@ -196,7 +196,7 @@ func (s *ProxyServer) removeSession(cs *Session) {
 		defer s.workMu.Unlock()
 		_, ok := s.workDiff[cs.Extranonce]
 		if ok {
-			s.workDiff[cs.Extranonce].ToRemove = true
+			s.workDiff[cs.Extranonce].IsDel = true
 		}
 	}
 
